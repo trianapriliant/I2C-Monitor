@@ -90,7 +90,7 @@ start_source() {
     require_deps
     stop_monitor >/dev/null
     local interval=3
-    if [ "$src" = "spotify" ] || [ "$src" = "pomodoro" ] || [ "$src" = "companion" ] || [ "$src" = "network" ]; then
+    if [ "$src" = "spotify" ] || [ "$src" = "pomodoro" ] || [ "$src" = "companion" ] || [ "$src" = "network" ] || [ "$src" = "visualizer" ]; then
         interval=0.5
     fi
     nohup python3 -u tools/token_monitor.py --source "$src" --interval "$interval" \
@@ -122,6 +122,11 @@ interactive_menu() {
     echo "10) Stock Market & Forex Rates"
     echo "11) Interactive Todo List"
     echo "12) Pixel Art Desk Mascot Companion"
+    echo "13) Audio Equalizer Spectrum Visualizer"
+    echo "14) Mac Thermals & Battery Health"
+    echo "15) Agenda Calendar & Meeting Alert"
+    echo "16) Docker Containers & Local Servers"
+    echo "17) World Clock Multi-Timezone"
     echo "99) Rotasi Otomatis (Semua Mode)"
     echo " 0) Stop Monitor"
     echo "========================================"
@@ -140,6 +145,11 @@ interactive_menu() {
         10) start_source "stocks" ;;
         11) start_source "todo" ;;
         12) start_source "companion" ;;
+        13) start_source "visualizer" ;;
+        14) start_source "thermals" ;;
+        15) start_source "calendar" ;;
+        16) start_source "docker" ;;
+        17) start_source "worldclock" ;;
         99)
             stop_monitor >/dev/null
             nohup python3 -u tools/token_monitor.py --rotate 10 --interval 3 > "$LOG" 2>&1 &

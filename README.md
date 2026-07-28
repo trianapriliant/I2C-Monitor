@@ -1,6 +1,6 @@
 # I2C OLED Token & Multi-Mode Monitor
 
-Monitor pemakaian token AI coding assistant, statistik sistem PC, crypto ticker, media player, jam/cuaca, pomodoro timer, GitHub CI/CD, jaringan, saham, todo list, dan maskot piksel di layar OLED SSD1306 128x64 via ESP32 DevKit V1.
+Monitor pemakaian token AI coding assistant, statistik sistem PC, crypto ticker, media player, jam/cuaca, pomodoro timer, GitHub CI/CD, jaringan, saham, todo list, maskot piksel, audio visualizer, thermals Mac, kalender agenda, docker, dan world clock di layar OLED SSD1306 128x64 via ESP32 DevKit V1.
 
 Script Python di PC membaca data secara real-time dan memandunya ke ESP32 lewat Serial USB dengan arsitektur **Double-Buffering Shadow Frame Commit** untuk tampilan 100% bebas kedip (*zero flicker*).
 
@@ -30,6 +30,11 @@ tools/
     stocks.py              Stock Market Tech (AAPL, NVDA) & Forex Rates (USD/IDR)
     todo.py                Interactive Daily Todo List (Tombol Centang Tugas)
     companion.py           Pixel Art Desk Mascot Companion (Maskot Reaktif)
+    visualizer.py          Audio Equalizer Spectrum Visualizer (Animasi 16-Bar Equalizer)
+    thermals.py            macOS Thermal & Battery Health (CPU Temp, Power Watt, Cycle Count)
+    calendar.py            macOS Calendar & Meeting Alert (Countdown Rapat Terdekat)
+    docker.py              Docker Containers & Server Status (Running/Exited & Memory)
+    worldclock.py          World Clock Multi-Timezone (WIB, JST, GMT, PST, EST, AEST)
 ```
 
 Pemisahannya: **source** di folder `tools/sources/` mengatur pengambilan data di komputer, dan **firmware** `src/main.cpp` menangani rendering grafik OLED di ESP32.
@@ -63,7 +68,7 @@ Alamat I2C default: `0x3C` (dapat diubah di `include/config.h`).
 
 ---
 
-## Daftar 12 Mode Tampilan yang Tersedia
+## Daftar 17 Mode Tampilan yang Tersedia
 
 | Mode | ID `--source` | Deskripsi & Fitur Utama |
 | :--- | :--- | :--- |
@@ -79,6 +84,11 @@ Alamat I2C default: `0x3C` (dapat diubah di `include/config.h`).
 | 📈 **Stock Market** | `stocks` | Saham Tech Utama (`AAPL`, `NVDA`, `GOOGL`, `MSFT`, `AMZN`) & Kurs Mata Uang (`USD/IDR`, `EUR/IDR`, `SGD/IDR`). |
 | 📝 **Interactive Todo**| `todo` | **Interaktif Tombol**: Membaca `~/todo.txt`, Klik 1x untuk centang `[ ]` ➔ `[x]`, Klik 2x untuk pindah kursor penanda tugas. |
 | 🤖 **Desk Mascot** | `companion` | Maskot Piksel Reaktif (`HOT` saat CPU tinggi, `DANCING` saat musik menyala, `SLEEPING` saat malam/idle, `WORKING` saat coding). |
+| 📊 **Audio Visualizer**| `visualizer` | **16-Bar Equalizer Spectrum Visualizer** yang menari mengikuti lagu Spotify. |
+| ⚡ **Mac Thermals** | `thermals` | Suhu CPU Mac (°C), Status & Daya Baterai (Watt), Cycle Count, & Health Status. |
+| 📅 **Agenda Calendar**| `calendar` | Hitung Mundur Meeting Terdekat (`In 15m: Standup`) + Agenda Hari Ini dari macOS Calendar. |
+| 🐳 **Docker Status** | `docker` | Status Kontainer Docker lokal (`Postgres: 🟢`, `Redis: 🟢`, `Nginx: 🔴`) & Penggunaan Memory. |
+| 🌍 **World Clock** | `worldclock` | Jam Digital Multi-Zona Waktu Dunia (WIB, JST, GMT, PST, EST, AEST). |
 
 ---
 
@@ -89,10 +99,15 @@ Alamat I2C default: `0x3C` (dapat diubah di `include/config.h`).
 ./monitor.sh menu
 
 # Berpindah mode instan di background
+./monitor.sh switch visualizer
+./monitor.sh switch thermals
+./monitor.sh switch calendar
+./monitor.sh switch docker
+./monitor.sh switch worldclock
+./monitor.sh switch github
 ./monitor.sh switch spotify
 ./monitor.sh switch crypto
 ./monitor.sh switch pomodoro
-./monitor.sh switch github
 ./monitor.sh switch network
 ./monitor.sh switch stocks
 ./monitor.sh switch todo

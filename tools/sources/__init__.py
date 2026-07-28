@@ -20,6 +20,11 @@ from sources import (
     stocks,
     todo,
     companion,
+    visualizer,
+    thermals,
+    calendar,
+    docker,
+    worldclock,
 )
 
 _REGISTRY = {
@@ -35,6 +40,11 @@ _REGISTRY = {
     stocks.NAME: stocks.Source,
     todo.NAME: todo.Source,
     companion.NAME: companion.Source,
+    visualizer.NAME: visualizer.Source,
+    thermals.NAME: thermals.Source,
+    calendar.NAME: calendar.Source,
+    docker.NAME: docker.Source,
+    worldclock.NAME: worldclock.Source,
 }
 
 

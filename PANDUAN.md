@@ -1,6 +1,6 @@
 # Panduan Pemakaian I2C OLED Monitor
 
-Panduan praktis pengoperasian harian 12 mode tampilan, tombol interaktif, dan kalibrasi. Untuk arsitektur dan detail teknis, lihat [README.md](README.md).
+Panduan praktis pengoperasian harian 17 mode tampilan, tombol interaktif, dan kalibrasi. Untuk arsitektur dan detail teknis, lihat [README.md](README.md).
 
 ---
 
@@ -37,10 +37,15 @@ Kamu bisa berpindah mode secara instan lewat perintah `switch`, menu interaktif,
 
 ```bash
 # Berpindah mode langsung:
+./monitor.sh switch visualizer  # Audio Equalizer Spectrum Visualizer
+./monitor.sh switch thermals    # Mac CPU Temp & Battery Health
+./monitor.sh switch calendar    # Agenda Calendar & Meeting Alert
+./monitor.sh switch docker      # Docker Containers & Local Servers
+./monitor.sh switch worldclock  # World Clock Multi-Timezone
+./monitor.sh switch github      # GitHub & CI/CD Status
 ./monitor.sh switch spotify     # Media Player & Synced Lyrics
 ./monitor.sh switch crypto      # Crypto Ticker 3-Halaman
 ./monitor.sh switch pomodoro    # Focus Timer Interaktif
-./monitor.sh switch github      # GitHub & CI/CD Status
 ./monitor.sh switch network     # Network Ping & Traffic Speed
 ./monitor.sh switch stocks      # Stock Market & Kurs USD/IDR
 ./monitor.sh switch todo        # Interactive Daily Todo List
@@ -74,10 +79,15 @@ Tombol bawaan **BOOT (GPIO0)** atau **Tombol Eksternal di GPIO4** memiliki fungs
 
 ---
 
-## 📊 Daftar 12 Mode & Sub-Halaman
+## 📊 Daftar 17 Mode & Sub-Halaman
 
 | Mode | Sub-Halaman | Isi Tampilan |
 | :--- | :--- | :--- |
+| **`visualizer`** | Halaman 1<br>Halaman 2 | 16-Bar Equalizer Spectrum Visualizer + Judul Lagu & Artis<br>Detail Track Time & Spectrum Wave Line 2 |
+| **`thermals`** | Halaman 1<br>Halaman 2 | Suhu CPU Mac (°C), Status Thermal, Daya Wattage Baterai, % Baterai<br>Battery Health Status, Cycle Count, & Time Remaining |
+| **`calendar`** | Halaman 1<br>Halaman 2 | Meeting Terdekat + Hitung Mundur Waktu (`In 15m: Daily Standup`) + Total Agenda<br>Daftar 4 Agenda Meeting Hari Ini |
+| **`docker`** | Halaman 1<br>Halaman 2 | Count Running/Stopped Containers + Total Containers + Bar % Active<br>Daftar Status Kontainer (`Postgres: OK`, `Redis: OK`, `Nginx: OFF`) |
+| **`worldclock`**| Halaman 1<br>Halaman 2 | Jakarta (WIB), Tokyo (JST), London (GMT) + Tanggal<br>San Francisco (PST), New York (EST), Sydney (AEST) |
 | **`spotify`** | Halaman 1<br>Halaman 2 | Now Playing Dashboard (Judul, Artis, Durasi, Progress Bar)<br>**Synced Lyrics 1-Baris Full Layar** (Typewriter animation, Slow Marquee Judul) |
 | **`crypto`** | Halaman 1<br>Halaman 2<br>Halaman 3 | Top 5 Cryptos (`BTC`, `ETH`, `SOL`, `BNB`, `USDT`) + Kurs IDR<br>Altcoins (`XRP`, `DOGE`, `ADA`, `AVAX`, `DOT`) + Kurs IDR<br>Animasi Ticker Carousel 10 Altcoins |
 | **`github`** | Halaman 1<br>Halaman 2 | Daily Commits, Open PRs, Open Issues, Public Repos, Followers<br>Status GitHub Actions Build Terbaru (`SUCCESS` / `FAILED`) |
