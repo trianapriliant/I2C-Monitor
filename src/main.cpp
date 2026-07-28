@@ -102,6 +102,9 @@ struct CustomScreen {
     String p3Line3 = "";
     String p3Line4 = "";
     String p3Line5 = "";
+
+    // Graphical Spectrum Equalizer Payload (Comma separated 20 bar values 0-10)
+    String eqBars = "";
 };
 
 Stats stats;
@@ -420,7 +423,80 @@ void drawWrappedLyric(const String &text, int &y, int maxLines) {
     }
 }
 
+static int peaks[20] = {0};
+
+void drawSpectrumEqualizer() {
+    drawHeader(customScreen.hdrTitle.c_str(), "", customScreen.hdrSub);
+
+    // Render song title marquee at Y = 17
+    if (customScreen.line2.length() > 0) {
+        String info = customScreen.line2;
+        if (customScreen.line3.length() > 0 && customScreen.line3 != info) {
+            info += " • " + customScreen.line3;
+        }
+        drawMarqueeLine(0, 17, ">> ", info);
+    }
+
+    // Parse comma-separated spectrum values (20 bands)
+    int vals[20] = {0};
+    int bandIdx = 0;
+    int lastPos = 0;
+    String str = customScreen.eqBars;
+
+    for (int i = 0; i <= str.length() && bandIdx < 20; i++) {
+        if (i == (int)str.length() || str.charAt(i) == ',') {
+            String valStr = str.substring(lastPos, i);
+            valStr.trim();
+            vals[bandIdx] = valStr.toInt();
+            bandIdx++;
+            lastPos = i + 1;
+        }
+    }
+
+    // Render 20 graphical bars in segment blocks (VU meter style)
+    int numBars = 20;
+    int barWidth = 4;
+    int barGap = 2;
+    int segHeight = 2;
+    int segGap = 1;
+    int maxSegments = 10;
+    int startX = (SCREEN_WIDTH - (numBars * barWidth + (numBars - 1) * barGap)) / 2; // (128 - 118) / 2 = 5px
+    int floorY = 63; // floor line
+
+    for (int i = 0; i < numBars; i++) {
+        int v = vals[i];
+        if (v > maxSegments) v = maxSegments;
+        if (v < 0) v = 0;
+
+        // Floating peak decay animation
+        if (v >= peaks[i]) {
+            peaks[i] = v;
+        } else if (peaks[i] > 0) {
+            peaks[i]--; // Smooth peak decay
+        }
+
+        int x = startX + i * (barWidth + barGap);
+
+        // Draw segmented stacked blocks
+        for (int s = 0; s < v; s++) {
+            int y = floorY - (s * (segHeight + segGap)) - segHeight;
+            display.fillRect(x, y, barWidth, segHeight, SSD1306_WHITE);
+        }
+
+        // Draw floating peak indicator line
+        if (peaks[i] > 0) {
+            int peakY = floorY - (peaks[i] * (segHeight + segGap)) - segHeight;
+            display.drawFastHLine(x, peakY, barWidth, SSD1306_WHITE);
+        }
+    }
+}
+
 void pageCustomScreen() {
+    if (customScreen.subPage == 0 && customScreen.eqBars.length() > 0) {
+        drawSpectrumEqualizer();
+        return;
+    }
+
     if (customScreen.subPage == 2 && customScreen.maxSubPages > 2) {
         // Halaman 3: Special Animated Altcoin Carousel Ticker (Clean Size 1)
         drawHeader(customScreen.p3HdrTitle.c_str(), "", customScreen.p3HdrSub);
@@ -615,6 +691,9 @@ void applyField(const String &key, const String &value) {
         incomingCustomScreen.line5 = value;
     } else if (key == "BIG") {
         incomingCustomScreen.bigText = value;
+        incomingCustomScreen.active = true;
+    } else if (key == "EQ") {
+        incomingCustomScreen.eqBars = value;
         incomingCustomScreen.active = true;
     } else if (key == "P2_HDR") {
         incomingCustomScreen.maxSubPages = max(incomingCustomScreen.maxSubPages, 2);
