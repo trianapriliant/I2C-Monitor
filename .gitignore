@@ -1,0 +1,35 @@
+# PlatformIO & Build Artifacts
+.pio/
+.pioenvs/
+.piolibdeps/
+.clangd
+.clangd/
+compile_commands.json
+.gcc-flags.json
+
+# IDE & Editor Settings
+.vscode/
+.claude/
+.cache/
+
+# Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+
+# Logs & Temporary Files
+*.log
+/tmp/
+
+# macOS System Files
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes

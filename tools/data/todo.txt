@@ -1,0 +1,4 @@
+[ ] Selesaikan firmware ESP32
+[ ] Review PR GitHub
+[ ] Kopi & rehat sejenak
+[x] Setup OLED Monitor
