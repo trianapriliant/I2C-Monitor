@@ -1,12 +1,13 @@
 """
 Sumber data: Audio Spectrum Equalizer Visualizer.
 
-Animasi 20-Bar Graphical Equalizer Spectrum (VU Meter style dengan Floating Peak Hold) yang menari-nari sesuai lagu Spotify.
-Halaman 1: Graphical Spectrum Equalizer (20 Bands + Peak Hold) & Marquee Judul Lagu
+Animasi 20-Bar Graphical Equalizer dirender secara LOKAL di firmware ESP32 pada kecepatan penuh (~25fps).
+Python hanya mengirim status PLAYING/PAUSED dan info lagu — ESP32 menangani semua animasi grafis secara mandiri.
+
+Halaman 1: Graphical Spectrum Equalizer (20 Bands + Floating Peak Hold) & Marquee Judul Lagu
 Halaman 2: Detail Track, Progress, & Status Playback
 """
 
-import math
 import subprocess
 import time
 from sources.base import TokenSource
@@ -56,7 +57,6 @@ class Source(TokenSource):
 
     def __init__(self, scope="today", project=None):
         super().__init__(scope=scope, project=project)
-        self.frame = 0
 
     def available(self):
         return True
@@ -64,33 +64,8 @@ class Source(TokenSource):
     def totals(self):
         return {"input": 0, "output": 0, "cache_read": 0, "cache_write": 0, "cost": 0.0, "requests": 0}
 
-    def generate_20_eq_bands(self, is_playing):
-        self.frame += 1
-        bands = []
-        num_bands = 20
-
-        for i in range(num_bands):
-            if is_playing:
-                # Frequency spectrum simulation across 20 audio bands (Sub-bass, Bass, Mids, Highs)
-                freq_offset = i * 0.45
-                w1 = math.sin(self.frame * 0.5 + freq_offset) * 4.0
-                w2 = math.cos(self.frame * 0.8 - freq_offset * 0.5) * 3.0
-                w3 = math.sin(self.frame * 1.2 + freq_offset * 1.5) * 2.0
-                jitter = (hash(f"{self.frame}_{i}") % 3)
-
-                raw_val = w1 + w2 + w3 + 4.5 + jitter
-                val = max(1, min(10, int(raw_val)))
-            else:
-                # Baseline idle pulse
-                val = 1 if (i % 5 == 0 and (self.frame // 2) % 2 == 0) else 0
-
-            bands.append(str(val))
-
-        return ",".join(bands)
-
     def snapshot(self):
         m = get_media_info()
-        eq_string = self.generate_20_eq_bands(m["playing"])
 
         pos_m, pos_s = divmod(int(m["pos"]), 60)
         dur_m, dur_s = divmod(int(m["dur"] if m["dur"] < 10000 else m["dur"] / 1000), 60)
@@ -99,12 +74,15 @@ class Source(TokenSource):
         track_title = m["title"]
         artist_name = m["artist"]
 
+        # Send "1" for playing, "0" for paused — ESP32 generates animation locally
+        eq_state = "1" if m["playing"] else "0"
+
         return {
             "source": self.DISPLAY_NAME,
             "custom": {
-                # Halaman 1: Graphical Spectrum Equalizer (20 Bands + Peak Hold)
+                # Halaman 1: ESP32-animated Graphical Spectrum Equalizer
                 "hdr": f"SPECTRUM | {'PLAYING' if m['playing'] else 'PAUSED'}",
-                "eq": eq_string,
+                "eq": eq_state,
                 "l2": track_title,
                 "l3": artist_name,
                 # Halaman 2: Details & Track Info
@@ -125,10 +103,10 @@ class Source(TokenSource):
             "limit_week_pct": 50,
             "limit_week_mins": 4320,
             "cost": float(m["pos"]),
-            "input": self.frame,
+            "input": 1 if m["playing"] else 0,
             "output": 20,
             "requests": 1,
             "project": f"EQ:{track_title[:10]}",
-            "credit": float(self.frame),
+            "credit": float(m["pos"]),
             "models": [],
         }

@@ -423,56 +423,79 @@ void drawWrappedLyric(const String &text, int &y, int maxLines) {
     }
 }
 
-static int peaks[20] = {0};
+static int eqPeaks[20] = {0};
+static unsigned long lastEqPeakDecay = 0;
+// Simple pseudo-random based on seed
+static uint32_t eqRand(uint32_t seed) {
+    seed ^= seed << 13;
+    seed ^= seed >> 17;
+    seed ^= seed << 5;
+    return seed;
+}
+
+// Fast integer sine approximation (0-255 output, 0-1023 input angle)
+static int fastSin(int angle) {
+    angle = angle % 1024;
+    if (angle < 0) angle += 1024;
+    // Quarter-wave lookup approximation
+    int q = angle >> 8; // quadrant 0-3
+    int idx = angle & 0xFF;
+    int val;
+    if (q == 0) val = idx;
+    else if (q == 1) val = 255 - idx;
+    else if (q == 2) val = -idx;
+    else val = -(255 - idx);
+    return val; // range ~ -255 to +255
+}
 
 void drawSpectrumEqualizer() {
     drawHeader(customScreen.hdrTitle.c_str(), "", customScreen.hdrSub);
 
-    // Render song title marquee at Y = 17
+    // Render song title + artist marquee at Y = 17
     if (customScreen.line2.length() > 0) {
         String info = customScreen.line2;
         if (customScreen.line3.length() > 0 && customScreen.line3 != info) {
-            info += " • " + customScreen.line3;
+            info += " - " + customScreen.line3;
         }
-        drawMarqueeLine(0, 17, ">> ", info);
+        drawMarqueeLine(0, 17, "", info);
     }
 
-    // Parse comma-separated spectrum values (20 bands)
-    int vals[20] = {0};
-    int bandIdx = 0;
-    int lastPos = 0;
-    String str = customScreen.eqBars;
+    // Check if music is playing (eqBars contains "1" for playing, "0" for paused)
+    bool isPlaying = (customScreen.eqBars == "1");
 
-    for (int i = 0; i <= str.length() && bandIdx < 20; i++) {
-        if (i == (int)str.length() || str.charAt(i) == ',') {
-            String valStr = str.substring(lastPos, i);
-            valStr.trim();
-            vals[bandIdx] = valStr.toInt();
-            bandIdx++;
-            lastPos = i + 1;
-        }
-    }
-
-    // Render 20 graphical bars in segment blocks (VU meter style)
     int numBars = 20;
     int barWidth = 4;
     int barGap = 2;
     int segHeight = 2;
     int segGap = 1;
-    int maxSegments = 10;
-    int startX = (SCREEN_WIDTH - (numBars * barWidth + (numBars - 1) * barGap)) / 2; // (128 - 118) / 2 = 5px
-    int floorY = 63; // floor line
+    int maxSegs = 10;
+    int totalWidth = numBars * barWidth + (numBars - 1) * barGap; // 118
+    int startX = (SCREEN_WIDTH - totalWidth) / 2;
+    int floorY = 63;
 
+    unsigned long ms = millis();
+    // Generate animated spectrum locally at full frame rate
     for (int i = 0; i < numBars; i++) {
-        int v = vals[i];
-        if (v > maxSegments) v = maxSegments;
-        if (v < 0) v = 0;
+        int v = 0;
+        if (isPlaying) {
+            // Multi-wave procedural spectrum — runs at display refresh speed
+            int t = (int)(ms / 40); // ~25fps time base
+            int w1 = fastSin(t * 7 + i * 51) * 5 / 255;
+            int w2 = fastSin(t * 11 - i * 37) * 4 / 255;
+            int w3 = fastSin(t * 5 + i * 83) * 3 / 255;
+            // Per-bar jitter from hash
+            int jitter = (int)(eqRand((uint32_t)(ms / 80) * 31 + i * 17) % 3);
+            v = w1 + w2 + w3 + 5 + jitter;
+            if (v < 1) v = 1;
+            if (v > maxSegs) v = maxSegs;
+        } else {
+            // Idle: gentle pulse on every 5th bar
+            v = ((i % 5 == 0) && ((ms / 500) % 2 == 0)) ? 2 : 1;
+        }
 
-        // Floating peak decay animation
-        if (v >= peaks[i]) {
-            peaks[i] = v;
-        } else if (peaks[i] > 0) {
-            peaks[i]--; // Smooth peak decay
+        // Floating peak hold with timed decay
+        if (v >= eqPeaks[i]) {
+            eqPeaks[i] = v;
         }
 
         int x = startX + i * (barWidth + barGap);
@@ -484,9 +507,17 @@ void drawSpectrumEqualizer() {
         }
 
         // Draw floating peak indicator line
-        if (peaks[i] > 0) {
-            int peakY = floorY - (peaks[i] * (segHeight + segGap)) - segHeight;
+        if (eqPeaks[i] > 0) {
+            int peakY = floorY - (eqPeaks[i] * (segHeight + segGap)) - segHeight;
             display.drawFastHLine(x, peakY, barWidth, SSD1306_WHITE);
+        }
+    }
+
+    // Decay peaks every ~120ms
+    if (ms - lastEqPeakDecay > 120) {
+        lastEqPeakDecay = ms;
+        for (int i = 0; i < 20; i++) {
+            if (eqPeaks[i] > 0) eqPeaks[i]--;
         }
     }
 }
