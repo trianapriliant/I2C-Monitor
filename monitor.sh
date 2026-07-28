@@ -90,7 +90,9 @@ start_source() {
     require_deps
     stop_monitor >/dev/null
     local interval=3
-    if [ "$src" = "spotify" ] || [ "$src" = "pomodoro" ] || [ "$src" = "companion" ] || [ "$src" = "network" ] || [ "$src" = "visualizer" ]; then
+    if [ "$src" = "visualizer" ]; then
+        interval=0.08  # ~12fps untuk real-time audio FFT spectrum
+    elif [ "$src" = "spotify" ] || [ "$src" = "pomodoro" ] || [ "$src" = "companion" ] || [ "$src" = "network" ]; then
         interval=0.5
     fi
     nohup python3 -u tools/token_monitor.py --source "$src" --interval "$interval" \

@@ -460,40 +460,58 @@ void drawSpectrumEqualizer() {
         drawMarqueeLine(0, 17, "", info);
     }
 
-    // Check if music is playing (eqBars contains "1" for playing, "0" for paused)
-    bool isPlaying = (customScreen.eqBars == "1");
-
     int numBars = 20;
     int barWidth = 4;
     int barGap = 2;
     int segHeight = 2;
     int segGap = 1;
     int maxSegs = 10;
-    int totalWidth = numBars * barWidth + (numBars - 1) * barGap; // 118
+    int totalWidth = numBars * barWidth + (numBars - 1) * barGap;
     int startX = (SCREEN_WIDTH - totalWidth) / 2;
     int floorY = 63;
-
     unsigned long ms = millis();
-    // Generate animated spectrum locally at full frame rate
+
+    // Determine mode: real FFT data (contains commas) vs procedural fallback
+    bool hasRealData = (customScreen.eqBars.indexOf(',') >= 0);
+
+    // Parse real FFT values if available
+    int realVals[20] = {0};
+    if (hasRealData) {
+        int idx = 0, lastPos = 0;
+        String str = customScreen.eqBars;
+        for (int i = 0; i <= (int)str.length() && idx < 20; i++) {
+            if (i == (int)str.length() || str.charAt(i) == ',') {
+                realVals[idx] = str.substring(lastPos, i).toInt();
+                idx++;
+                lastPos = i + 1;
+            }
+        }
+    }
+
+    bool isPlaying = hasRealData || (customScreen.eqBars == "1");
+
     for (int i = 0; i < numBars; i++) {
         int v = 0;
-        if (isPlaying) {
-            // Multi-wave procedural spectrum — runs at display refresh speed
-            int t = (int)(ms / 40); // ~25fps time base
+        if (hasRealData) {
+            // Real FFT data from Python audio capture
+            v = realVals[i];
+            if (v < 0) v = 0;
+            if (v > maxSegs) v = maxSegs;
+        } else if (isPlaying) {
+            // Fallback: procedural animation when no BlackHole
+            int t = (int)(ms / 40);
             int w1 = fastSin(t * 7 + i * 51) * 5 / 255;
             int w2 = fastSin(t * 11 - i * 37) * 4 / 255;
             int w3 = fastSin(t * 5 + i * 83) * 3 / 255;
-            // Per-bar jitter from hash
             int jitter = (int)(eqRand((uint32_t)(ms / 80) * 31 + i * 17) % 3);
             v = w1 + w2 + w3 + 5 + jitter;
             if (v < 1) v = 1;
             if (v > maxSegs) v = maxSegs;
         } else {
-            // Idle: gentle pulse on every 5th bar
             v = ((i % 5 == 0) && ((ms / 500) % 2 == 0)) ? 2 : 1;
         }
 
-        // Floating peak hold with timed decay
+        // Floating peak hold
         if (v >= eqPeaks[i]) {
             eqPeaks[i] = v;
         }
