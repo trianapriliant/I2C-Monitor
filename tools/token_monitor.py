@@ -85,6 +85,8 @@ def build_payload(snap):
             lines.append(f"HDR:{c['hdr']}")
         if "big" in c:
             lines.append(f"BIG:{c['big']}")
+        if "eq" in c:
+            lines.append(f"EQ:{c['eq']}")
         if "l1" in c:
             lines.append(f"L1:{c['l1']}")
         if "bar1" in c:
