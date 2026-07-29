@@ -335,7 +335,7 @@ def main():
             stale = (time.time() - last_sent_at) >= RESEND_EVERY
             if payload != last_payload or stale or args.once:
                 if ser:
-                    ser.write(payload.encode("ascii", errors="replace"))
+                    ser.write(payload.encode("ascii", errors="ignore"))
                     ser.flush()
                 last_sent_at = time.time()
                 if payload != last_payload:

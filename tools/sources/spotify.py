@@ -9,12 +9,75 @@ import json
 import re
 import subprocess
 import time
+import unicodedata
 import urllib.parse
 import urllib.request
 from sources.base import TokenSource
 
 NAME = "spotify"
 DISPLAY_NAME = "Media Player"
+
+# ==============================================================================
+# Transliterasi Unicode → ASCII untuk layar OLED SSD1306 (hanya support ASCII).
+# Mendukung: Cyrillic (Rusia), aksen Latin (Prancis/Jerman/Spanyol), dan lainnya.
+# Huruf non-Latin yang tidak bisa di-transliterasi akan di-skip (bukan '?').
+# ==============================================================================
+_CYRILLIC_MAP = {
+    # Uppercase
+    'А': 'A', 'Б': 'B', 'В': 'V', 'Г': 'G', 'Д': 'D', 'Е': 'E', 'Ё': 'Yo',
+    'Ж': 'Zh', 'З': 'Z', 'И': 'I', 'Й': 'Y', 'К': 'K', 'Л': 'L', 'М': 'M',
+    'Н': 'N', 'О': 'O', 'П': 'P', 'Р': 'R', 'С': 'S', 'Т': 'T', 'У': 'U',
+    'Ф': 'F', 'Х': 'Kh', 'Ц': 'Ts', 'Ч': 'Ch', 'Ш': 'Sh', 'Щ': 'Shch',
+    'Ъ': '', 'Ы': 'Y', 'Ь': '', 'Э': 'E', 'Ю': 'Yu', 'Я': 'Ya',
+    # Lowercase
+    'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo',
+    'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
+    'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+    'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch',
+    'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya',
+    # Ukrainian extras
+    'І': 'I', 'і': 'i', 'Ї': 'Yi', 'ї': 'yi', 'Є': 'Ye', 'є': 'ye',
+    'Ґ': 'G', 'ґ': 'g',
+}
+
+
+def transliterate_to_ascii(text):
+    """Konversi teks Unicode ke ASCII-safe untuk layar OLED.
+
+    Prioritas:
+    1. Jika sudah ASCII, loloskan langsung (fast-path).
+    2. Lookup tabel Cyrillic untuk transliterasi fonetis yang akurat.
+    3. unicodedata.normalize('NFKD') untuk aksen Latin (é→e, ü→u, dll).
+    4. Karakter yang tidak bisa dikonversi akan di-skip (bukan '?').
+    """
+    if not text:
+        return text
+
+    result = []
+    for ch in text:
+        # Fast-path: ASCII langsung lolos
+        if ord(ch) < 128:
+            result.append(ch)
+            continue
+
+        # Cyrillic lookup
+        if ch in _CYRILLIC_MAP:
+            result.append(_CYRILLIC_MAP[ch])
+            continue
+
+        # Aksen Latin via NFKD decomposition (é→e, ñ→n, ü→u, dll)
+        decomposed = unicodedata.normalize('NFKD', ch)
+        ascii_chars = ''.join(c for c in decomposed if ord(c) < 128)
+        if ascii_chars:
+            result.append(ascii_chars)
+            continue
+
+        # Skip karakter yang tidak bisa ditransliterasi (CJK, emoji, dll)
+        # Lebih baik skip daripada tampilkan '?' yang membingungkan
+        result.append('')
+
+    return ''.join(result)
+
 
 APPLESCRIPT_SPOTIFY = """
 if application "Spotify" is running then
@@ -275,25 +338,30 @@ class Source(TokenSource):
         lyrics = fetch_synced_lyrics(m["title"], m["artist"], m["album"], m["dur"])
         prev_lyr, curr_lyr, next_lyr = get_current_lyric_lines(lyrics, m["pos"])
 
-        title_mq = marquee_text(m["title"], max_len=14)
-        artist_mq = marquee_text(m["artist"], max_len=14)
+        # Transliterasi Unicode → ASCII untuk OLED (Cyrillic, aksen Latin, dll)
+        safe_title = transliterate_to_ascii(m["title"])
+        safe_artist = transliterate_to_ascii(m["artist"])
+        safe_lyric = transliterate_to_ascii(curr_lyr) if curr_lyr else "-"
+
+        title_mq = marquee_text(safe_title, max_len=14)
+        artist_mq = marquee_text(safe_artist, max_len=14)
 
         return {
             "source": self.DISPLAY_NAME,
             "custom": {
                 # Page 1: Player Dashboard
                 "hdr": f"NOW PLAYING | 1/2",
-                "l1": f"Lagu : {m['title']}",
-                "l2": f"Artis: {m['artist']}",
+                "l1": f"Lagu : {safe_title}",
+                "l2": f"Artis: {safe_artist}",
                 "l3": f"Waktu: {time_fmt}",
                 "bar2": m["pct"],
                 # Page 2: Synced Lyrics (Single active lyric focus + Song title marquee)
-                "p2_hdr": f"{m['title']} | 2/2",
-                "p2_l2": curr_lyr if curr_lyr else "-",
+                "p2_hdr": f"{safe_title} | 2/2",
+                "p2_l2": safe_lyric,
             },
             "plan": "Player",
-            "model": m["title"],
-            "effort": m["artist"],
+            "model": safe_title,
+            "effort": safe_artist,
             "context_used": m["pos"],
             "context_max": max(m["dur"], 1),
             "context_pct": m["pct"],
@@ -308,7 +376,7 @@ class Source(TokenSource):
             "project": time_fmt,
             "credit": 0.0,
             "models": [
-                {"model": m["title"], "cost": 0.0, "pct": m["pct"]},
-                {"model": m["artist"], "cost": 0.0, "pct": m["pct"]},
+                {"model": safe_title, "cost": 0.0, "pct": m["pct"]},
+                {"model": safe_artist, "cost": 0.0, "pct": m["pct"]},
             ],
         }
