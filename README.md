@@ -37,6 +37,11 @@ tools/
     worldclock.py          World Clock Multi-Timezone (WIB, JST, GMT, PST, EST, AEST)
     stage.py               Stage Karaoke & Beat Sync Visualizer (Lirik Per Kata, Beat Shake & Dancing Line)
     video.py               Video Animation & 3D FX Streamer (3D Starfield Warp, 3D Cube, Synthwave Grid & Bad Apple)
+    arcade.py              Retro OLED Mini Games (Flappy Bird, Snake, Pong with Score System)
+    news.py                Breaking News & Tech RSS Feed Reader Ticker (AI & Tech Headlines)
+    matrix.py              Matrix Digital Rain ASCII Animation & Cyberpunk HUD Terminal
+    eyes.py                Cute Expressive Robo Eyes (Animasi Mata Lucu: Kedip, Lirik, Happy, Sleepy, Wink)
+    orbit.py               Solar System 3D Orbit Simulation & Moon Phase Tracker
 ```
 
 Pemisahannya: **source** di folder `tools/sources/` mengatur pengambilan data di komputer, dan **firmware** `src/main.cpp` menangani rendering grafik OLED di ESP32.

@@ -811,6 +811,203 @@ void drawVideoDisplay() {
     }
 }
 
+void drawArcadeGame() {
+    drawMarqueeLine(0, 0, "ARCADE ", customScreen.line1);
+    display.drawFastHLine(0, 14, SCREEN_WIDTH, SSD1306_WHITE);
+
+    unsigned long ms = millis();
+    int gameIdx = 0;
+    int comma = customScreen.eqBars.indexOf(',');
+    if (comma > 0) gameIdx = customScreen.eqBars.substring(0, comma).toInt();
+
+    if (gameIdx == 0) {
+        // Flappy Bird OLED
+        int birdY = 36 + (int)(fastSin(ms * 8 / 10) * 8) / 255;
+        display.fillRect(24, birdY, 8, 6, SSD1306_WHITE); // Bird body
+        display.drawPixel(30, birdY + 1, SSD1306_BLACK);  // Eye
+        display.drawFastHLine(32, birdY + 3, 3, SSD1306_WHITE); // Beak
+
+        // Pipes
+        int pipeX1 = (128 - ((int)(ms / 25) % 150));
+        if (pipeX1 >= -12 && pipeX1 < 128) {
+            display.drawRect(pipeX1, 15, 12, 12, SSD1306_WHITE);
+            display.drawRect(pipeX1, 42, 12, 22, SSD1306_WHITE);
+        }
+        printCentered("SCORE: 42", 56, 1);
+    } else if (gameIdx == 1) {
+        // Snake Game
+        int t = (int)(ms / 150);
+        int headX = 40 + (t % 10) * 4;
+        int headY = 32;
+        for (int i = 0; i < 6; i++) {
+            display.fillRect(headX - i * 4, headY, 3, 3, SSD1306_WHITE);
+        }
+        display.fillRect(84, 32, 4, 4, SSD1306_WHITE); // Food
+        printCentered("SNAKE SCORE: 120", 56, 1);
+    } else {
+        // Pong
+        int ballX = 30 + (int)(fastSin(ms * 10 / 10) * 30) / 255;
+        int ballY = 36 + (int)(fastSin(ms * 14 / 10) * 12) / 255;
+        display.fillRect(8, 28 + (int)(fastSin(ms * 10 / 10) * 10) / 255, 3, 16, SSD1306_WHITE);
+        display.fillRect(117, 28 - (int)(fastSin(ms * 10 / 10) * 10) / 255, 3, 16, SSD1306_WHITE);
+        display.fillRect(ballX + 30, ballY, 3, 3, SSD1306_WHITE);
+        printCentered("PONG 03 : 02", 56, 1);
+    }
+}
+
+void drawNewsFeed() {
+    drawMarqueeLine(0, 0, "NEWS ", customScreen.hdrTitle);
+    display.drawFastHLine(0, 14, SCREEN_WIDTH, SSD1306_WHITE);
+
+    String headline = customScreen.line1;
+    if (headline.length() == 0) headline = customScreen.line2;
+
+    int y = 20;
+    if (headline.length() > 0) {
+        // Multi-line wrapped text rendering for RSS headline
+        int maxCharsPerLine = 21;
+        for (int i = 0; i < (int)headline.length() && y < 54; i += maxCharsPerLine) {
+            String chunk = headline.substring(i, min(i + maxCharsPerLine, (int)headline.length()));
+            display.setCursor(0, y);
+            display.print(chunk);
+            y += 10;
+        }
+    }
+    display.drawFastHLine(0, 55, SCREEN_WIDTH, SSD1306_WHITE);
+    display.setCursor(0, 56);
+    display.print(customScreen.line3);
+}
+
+void drawMatrixRain() {
+    drawMarqueeLine(0, 0, "MATRIX ", customScreen.hdrTitle);
+    display.drawFastHLine(0, 14, SCREEN_WIDTH, SSD1306_WHITE);
+
+    unsigned long ms = millis();
+    // 16 columns of falling characters
+    for (int col = 0; col < 16; col++) {
+        int x = col * 8;
+        int speed = (col % 3 + 1) * 2;
+        int headY = 15 + ((int)(ms / 20 * speed + col * 17) % 55);
+
+        for (int trail = 0; trail < 4; trail++) {
+            int y = headY - trail * 7;
+            if (y >= 16 && y < 64) {
+                char ch = (char)(33 + ((col * 13 + trail * 7 + (int)(ms / 100)) % 90));
+                display.setCursor(x, y);
+                display.print(ch);
+            }
+        }
+    }
+}
+
+void drawCuteEyes() {
+    drawMarqueeLine(0, 0, "EYES ", customScreen.hdrTitle);
+    display.drawFastHLine(0, 14, SCREEN_WIDTH, SSD1306_WHITE);
+
+    unsigned long ms = millis();
+    int moodIdx = 0;
+    bool isBlinking = false;
+
+    int comma = customScreen.eqBars.indexOf(',');
+    if (comma > 0) {
+        moodIdx = customScreen.eqBars.substring(0, comma).toInt();
+        isBlinking = (customScreen.eqBars.substring(comma + 1).toInt() == 1);
+    }
+
+    // Eye dimensions & positions
+    int eyeW = 32;
+    int eyeH = 26;
+    int leftX = 20;
+    int rightX = 76;
+    int eyeY = 24;
+
+    // Pupil shift offsets based on mood
+    int offsetX = 0;
+    int offsetY = 0;
+
+    if (moodIdx == 2) offsetX = -6; // Look Left
+    else if (moodIdx == 3) offsetX = 6; // Look Right
+
+    // Periodic Blink
+    if (isBlinking || ((ms / 3500) % 7 == 0 && (ms % 3500) < 150)) {
+        // Blinking line
+        display.drawFastHLine(leftX, eyeY + 13, eyeW, SSD1306_WHITE);
+        display.drawFastHLine(rightX, eyeY + 13, eyeW, SSD1306_WHITE);
+        return;
+    }
+
+    if (moodIdx == 1) {
+        // Happy Eyes (Inverted Arc / Cheerful ^ ^)
+        display.drawRoundRect(leftX, eyeY, eyeW, eyeH, 8, SSD1306_WHITE);
+        display.drawRoundRect(rightX, eyeY, eyeW, eyeH, 8, SSD1306_WHITE);
+        display.fillTriangle(leftX, eyeY + 14, leftX + eyeW, eyeY + 14, leftX + eyeW/2, eyeY + eyeH, SSD1306_BLACK);
+        display.fillTriangle(rightX, eyeY + 14, rightX + eyeW, eyeY + 14, rightX + eyeW/2, eyeY + eyeH, SSD1306_BLACK);
+    } else if (moodIdx == 4) {
+        // Sleepy / Drowsy Eyes (- -)
+        display.drawRoundRect(leftX, eyeY + 8, eyeW, 12, 4, SSD1306_WHITE);
+        display.drawRoundRect(rightX, eyeY + 8, eyeW, 12, 4, SSD1306_WHITE);
+        display.fillRect(leftX + 8, eyeY + 12, 16, 4, SSD1306_WHITE);
+        display.fillRect(rightX + 8, eyeY + 12, 16, 4, SSD1306_WHITE);
+    } else if (moodIdx == 5) {
+        // Wink Eye (Left open, Right winking line)
+        display.fillRoundRect(leftX, eyeY, eyeW, eyeH, 8, SSD1306_WHITE);
+        display.fillCircle(leftX + 16 + offsetX, eyeY + 13 + offsetY, 6, SSD1306_BLACK);
+        display.fillCircle(leftX + 20, eyeY + 9, 3, SSD1306_WHITE); // Glint
+        display.drawFastHLine(rightX, eyeY + 13, eyeW, SSD1306_WHITE);
+    } else {
+        // Normal Expressive Eyes
+        display.fillRoundRect(leftX, eyeY, eyeW, eyeH, 8, SSD1306_WHITE);
+        display.fillRoundRect(rightX, eyeY, eyeW, eyeH, 8, SSD1306_WHITE);
+
+        // Pupils
+        display.fillCircle(leftX + 16 + offsetX, eyeY + 13 + offsetY, 6, SSD1306_BLACK);
+        display.fillCircle(rightX + 16 + offsetX, eyeY + 13 + offsetY, 6, SSD1306_BLACK);
+
+        // Pupil Glint Dots (Cute highlights)
+        display.fillCircle(leftX + 20 + offsetX, eyeY + 9 + offsetY, 3, SSD1306_WHITE);
+        display.fillCircle(rightX + 20 + offsetX, eyeY + 9 + offsetY, 3, SSD1306_WHITE);
+    }
+}
+
+void drawOrbitSimulation() {
+    drawMarqueeLine(0, 0, "ORBIT ", customScreen.hdrTitle);
+    display.drawFastHLine(0, 14, SCREEN_WIDTH, SSD1306_WHITE);
+
+    unsigned long ms = millis();
+    int sunX = 50;
+    int sunY = 39;
+
+    // Central Sun
+    display.fillCircle(sunX, sunY, 6, SSD1306_WHITE);
+
+    // Orbit 1 (Mercury)
+    display.drawCircle(sunX, sunY, 12, SSD1306_WHITE);
+    int p1X = sunX + (int)(fastSin(ms * 8 / 10) * 12) / 255;
+    int p1Y = sunY + (int)(cos(ms * 0.008f) * 12);
+    display.fillCircle(p1X, p1Y, 2, SSD1306_WHITE);
+
+    // Orbit 2 (Earth & Moon)
+    display.drawCircle(sunX, sunY, 22, SSD1306_WHITE);
+    int eX = sunX + (int)(fastSin(ms * 4 / 10) * 22) / 255;
+    int eY = sunY + (int)(cos(ms * 0.004f) * 22);
+    display.fillCircle(eX, eY, 3, SSD1306_WHITE);
+
+    // Moon orbiting Earth
+    int mX = eX + (int)(fastSin(ms * 15 / 10) * 6) / 255;
+    int mY = eY + (int)(cos(ms * 0.015f) * 6);
+    display.drawPixel(mX, mY, SSD1306_WHITE);
+
+    // Moon Phase Display Graphic at top right
+    int phaseIdx = 0;
+    int comma = customScreen.eqBars.indexOf(',');
+    if (comma > 0) phaseIdx = customScreen.eqBars.substring(0, comma).toInt();
+
+    display.drawCircle(108, 38, 10, SSD1306_WHITE);
+    if (phaseIdx == 0) display.fillCircle(108, 38, 9, SSD1306_BLACK); // New Moon
+    else if (phaseIdx == 4) display.fillCircle(108, 38, 9, SSD1306_WHITE); // Full Moon
+    else display.fillRect(108, 29, 9, 18, SSD1306_WHITE); // Half/Crescent
+}
+
 void pageCustomScreen() {
     if (customScreen.hdrTitle.startsWith("STAGE")) {
         drawStageKaraoke();
@@ -824,6 +1021,31 @@ void pageCustomScreen() {
 
     if (customScreen.hdrTitle.startsWith("SPECTRUM")) {
         drawSpectrumEqualizer();
+        return;
+    }
+
+    if (customScreen.hdrTitle.startsWith("ARCADE")) {
+        drawArcadeGame();
+        return;
+    }
+
+    if (customScreen.hdrTitle.startsWith("NEWS")) {
+        drawNewsFeed();
+        return;
+    }
+
+    if (customScreen.hdrTitle.startsWith("MATRIX")) {
+        drawMatrixRain();
+        return;
+    }
+
+    if (customScreen.hdrTitle.startsWith("EYES")) {
+        drawCuteEyes();
+        return;
+    }
+
+    if (customScreen.hdrTitle.startsWith("ORBIT")) {
+        drawOrbitSimulation();
         return;
     }
 

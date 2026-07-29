@@ -90,9 +90,9 @@ start_source() {
     require_deps
     stop_monitor >/dev/null
     local interval=3
-    if [ "$src" = "visualizer" ] || [ "$src" = "stage" ] || [ "$src" = "video" ]; then
-        interval=0.04  # ~25fps untuk real-time video, audio FFT spectrum & karaoke stage (low-latency)
-    elif [ "$src" = "spotify" ] || [ "$src" = "pomodoro" ] || [ "$src" = "companion" ] || [ "$src" = "network" ]; then
+    if [ "$src" = "visualizer" ] || [ "$src" = "stage" ] || [ "$src" = "video" ] || [ "$src" = "arcade" ] || [ "$src" = "matrix" ] || [ "$src" = "eyes" ] || [ "$src" = "orbit" ]; then
+        interval=0.04  # ~25fps untuk real-time visualizer, game, eyes & 3D orbit (low-latency)
+    elif [ "$src" = "spotify" ] || [ "$src" = "pomodoro" ] || [ "$src" = "companion" ] || [ "$src" = "network" ] || [ "$src" = "news" ]; then
         interval=0.5
     fi
     nohup python3 -u tools/token_monitor.py --source "$src" --interval "$interval" \
@@ -131,6 +131,11 @@ interactive_menu() {
     echo "17) World Clock Multi-Timezone"
     echo "18) Stage Karaoke & Beat Sync Visualizer"
     echo "19) Video Animation & 3D FX Streamer"
+    echo "20) Retro OLED Mini Games (Flappy Bird/Snake)"
+    echo "21) Breaking News & Tech RSS Ticker"
+    echo "22) Matrix Digital Rain & Cyberpunk HUD"
+    echo "23) Cute Expressive Robo Eyes Animation"
+    echo "24) Solar System & Moon Phase Orbit 3D"
     echo "99) Rotasi Otomatis (Semua Mode)"
     echo " 0) Stop Monitor"
     echo "========================================"
@@ -156,6 +161,11 @@ interactive_menu() {
         17) start_source "worldclock" ;;
         18) start_source "stage" ;;
         19) start_source "video" ;;
+        20) start_source "arcade" ;;
+        21) start_source "news" ;;
+        22) start_source "matrix" ;;
+        23) start_source "eyes" ;;
+        24) start_source "orbit" ;;
         99)
             stop_monitor >/dev/null
             nohup python3 -u tools/token_monitor.py --rotate 10 --interval 3 > "$LOG" 2>&1 &

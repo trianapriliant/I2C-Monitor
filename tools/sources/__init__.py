@@ -27,6 +27,11 @@ from sources import (
     worldclock,
     stage,
     video,
+    arcade,
+    news,
+    matrix,
+    eyes,
+    orbit,
 )
 
 _REGISTRY = {
@@ -49,6 +54,11 @@ _REGISTRY = {
     worldclock.NAME: worldclock.Source,
     stage.NAME: stage.Source,
     video.NAME: video.Source,
+    arcade.NAME: arcade.Source,
+    news.NAME: news.Source,
+    matrix.NAME: matrix.Source,
+    eyes.NAME: eyes.Source,
+    orbit.NAME: orbit.Source,
 }
 
 
