@@ -549,22 +549,22 @@ void drawStageKaraoke() {
     drawMarqueeLine(0, 0, "STAGE ", trackInfo);
     display.drawFastHLine(0, 14, SCREEN_WIDTH, SSD1306_WHITE);
 
-    // Parse Stage Karaoke payload: line_text||word_idx||active_word
-    String lineText = "";
-    int activeWordIdx = 0;
-    String activeWord = "";
+    // Parse Stage Karaoke payload: active_word||word_progress
+    String wordToDisplay = "";
+    String progressInfo = "";
 
     String l2 = customScreen.line2;
     int p1 = l2.indexOf("||");
-    int p2 = (p1 >= 0) ? l2.indexOf("||", p1 + 2) : -1;
-
-    if (p1 >= 0 && p2 > p1) {
-        lineText = l2.substring(0, p1);
-        activeWordIdx = l2.substring(p1 + 2, p2).toInt();
-        activeWord = l2.substring(p2 + 2);
+    if (p1 >= 0) {
+        wordToDisplay = l2.substring(0, p1);
+        progressInfo = l2.substring(p1 + 2);
     } else {
-        lineText = l2;
-        activeWord = customScreen.line3;
+        wordToDisplay = l2;
+        progressInfo = customScreen.line3;
+    }
+
+    if (wordToDisplay.length() == 0) {
+        wordToDisplay = customScreen.line3;
     }
 
     // 2. Parse FFT bass energy for Beat Shaking
@@ -585,7 +585,6 @@ void drawStageKaraoke() {
         // Bass average from bands 0..3
         bassEnergy = (realVals[0] + realVals[1] + realVals[2] + realVals[3]) / 4;
     } else if (customScreen.eqBars == "1") {
-        // Procedural beat pulse every ~400ms
         bassEnergy = ((millis() / 200) % 2 == 0) ? 7 : 2;
     }
 
@@ -598,38 +597,26 @@ void drawStageKaraoke() {
         shakeY = (int)(eqRand((uint32_t)(ms / 50) + 7) % 3) - 1; // -1, 0, +1
     }
 
-    // 3. Blue Block Stage (Y=16..63): Spacious Karaoke & Visualizer
-    // Lyric Line at Y = 19
-    int lyricY = 19 + shakeY;
-    if (lineText.length() > 0) {
-        String dispLine = lineText;
-        if (activeWord.length() > 0 && lineText.indexOf(activeWord) >= 0) {
-            if (dispLine.length() > 21) {
-                int pos = dispLine.indexOf(activeWord);
-                if (pos > 10) {
-                    dispLine = ".." + dispLine.substring(pos - 6);
-                }
-                if (dispLine.length() > 21) {
-                    dispLine = dispLine.substring(0, 21);
-                }
-            }
-        } else if (dispLine.length() > 21) {
-            dispLine = dispLine.substring(0, 21);
+    // 3. Blue Block Stage (Y=16..63): BIG Active Word Display (Size 2 Font)
+    if (wordToDisplay.length() > 0) {
+        if (wordToDisplay.length() <= 10) {
+            // Render BIG Text Size 2 (12x16px per char)
+            int charW = 12;
+            int textW = wordToDisplay.length() * charW;
+            int startX = (SCREEN_WIDTH - textW) / 2;
+            if (startX < 0) startX = 0;
+            display.setTextSize(2);
+            display.setCursor(startX + shakeX, 18 + shakeY);
+            display.print(wordToDisplay);
+            display.setTextSize(1);
+        } else {
+            // Fallback to Size 1 for long words
+            printCentered(wordToDisplay.c_str(), 22 + shakeY, 1);
         }
-        printCentered(dispLine.c_str(), lyricY, 1);
     }
 
-    // Active Word Focus Badge at Y = 30
-    if (activeWord.length() > 0) {
-        String badge = "> " + activeWord + " <";
-        int bw = badge.length() * 6 + 4;
-        int bx = (SCREEN_WIDTH - bw) / 2;
-        display.drawRoundRect(bx, 29 + shakeY, bw, 9, 2, SSD1306_WHITE);
-        printCentered(badge.c_str(), 30 + shakeY, 1);
-    }
-
-    // 4. Beat-Reactive Dancing Line Animation at Y = 42
-    int waveY = 42;
+    // 4. Beat-Reactive Dancing Line Animation at Y = 38
+    int waveY = 38;
     int amplitude = (bassEnergy >= 5) ? 3 : 1;
     for (int x = 0; x < SCREEN_WIDTH; x += 2) {
         int angle = (int)(x * 12 + ms * 8 / 10);
@@ -638,13 +625,13 @@ void drawStageKaraoke() {
         display.drawPixel(x + 1, waveY + dy, SSD1306_WHITE);
     }
 
-    // 5. Compact 20-Band Equalizer at Floor Y = 46..63 (17px height)
+    // 5. Compact 20-Band Equalizer at Floor Y = 42..63 (21px height)
     int numBars = 20;
     int barWidth = 4;
     int barGap = 2;
     int segHeight = 2;
     int segGap = 1;
-    int maxSegs = 6;
+    int maxSegs = 7;
     int totalWidth = numBars * barWidth + (numBars - 1) * barGap; // 118
     int startX = (SCREEN_WIDTH - totalWidth) / 2;
     int floorY = 63;
@@ -652,7 +639,7 @@ void drawStageKaraoke() {
     for (int i = 0; i < numBars; i++) {
         int v = 0;
         if (hasRealData) {
-            v = realVals[i] * 6 / 10; // scale 0-10 -> 0-6
+            v = realVals[i] * 7 / 10; // scale 0-10 -> 0-7
             if (v < 0) v = 0;
             if (v > maxSegs) v = maxSegs;
         } else if (bassEnergy > 0) {

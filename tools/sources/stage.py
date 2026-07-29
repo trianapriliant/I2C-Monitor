@@ -349,47 +349,75 @@ def calculate_word_karaoke(lyrics, current_pos):
     return line_text, active_word, active_word_idx, len(words)
 
 
-def get_media_info():
-    try:
-        out = (
-            subprocess.check_output(
-                ["osascript", "-e", APPLESCRIPT_SPOTIFY], stderr=subprocess.DEVNULL
-            )
-            .decode()
-            .strip()
-        )
-        parts = out.split("||")
-        if len(parts) == 5:
-            full_title = parts[0]
-            full_artist = parts[1]
-            full_album = parts[2]
-            pos_str = parts[3].replace(",", ".")
-            dur_str = parts[4].replace(",", ".")
-            pos = float(pos_str) if pos_str else 0.0
-            dur = float(dur_str) if dur_str else 100.0
-            if dur > 10000:
-                dur = dur / 1000.0
-            pct = int((pos / dur * 100)) if dur > 0 else 0
-            return {
-                "title": full_title or "No Media",
-                "artist": full_artist or "-",
-                "album": full_album or "",
-                "pos": pos,
-                "dur": dur,
-                "pct": min(pct, 100),
-                "playing": full_title not in ("No Media", "Paused", "Tidak Ada Media"),
-            }
-    except Exception:
-        pass
-    return {
-        "title": "No Media",
-        "artist": "Spotify/Music",
-        "album": "",
-        "pos": 0.0,
-        "dur": 100.0,
-        "pct": 0,
-        "playing": False,
-    }
+class MediaInfoThread(threading.Thread):
+    """Background thread yang membaca Spotify metadata via AppleScript setiap 0.3s
+
+    menghindari subprocess overhead pada render loop 25 FPS.
+    """
+
+    def __init__(self):
+        super().__init__(daemon=True)
+        self.lock = threading.Lock()
+        self.running = True
+        self.info = {
+            "title": "No Media",
+            "artist": "Spotify/Music",
+            "album": "",
+            "pos": 0.0,
+            "dur": 100.0,
+            "pct": 0,
+            "playing": False,
+            "poll_time": time.time(),
+        }
+
+    def run(self):
+        while self.running:
+            try:
+                out = (
+                    subprocess.check_output(
+                        ["osascript", "-e", APPLESCRIPT_SPOTIFY], stderr=subprocess.DEVNULL
+                    )
+                    .decode()
+                    .strip()
+                )
+                parts = out.split("||")
+                if len(parts) == 5:
+                    full_title = parts[0]
+                    full_artist = parts[1]
+                    full_album = parts[2]
+                    pos_str = parts[3].replace(",", ".")
+                    dur_str = parts[4].replace(",", ".")
+                    pos = float(pos_str) if pos_str else 0.0
+                    dur = float(dur_str) if dur_str else 100.0
+                    if dur > 10000:
+                        dur = dur / 1000.0
+                    pct = int((pos / dur * 100)) if dur > 0 else 0
+                    is_playing = full_title not in ("No Media", "Paused", "Tidak Ada Media")
+                    with self.lock:
+                        self.info = {
+                            "title": full_title or "No Media",
+                            "artist": full_artist or "-",
+                            "album": full_album or "",
+                            "pos": pos,
+                            "dur": dur,
+                            "pct": min(pct, 100),
+                            "playing": is_playing,
+                            "poll_time": time.time(),
+                        }
+            except Exception:
+                pass
+            time.sleep(0.3)
+
+    def get_info(self):
+        with self.lock:
+            info = dict(self.info)
+        now = time.time()
+        if info["playing"]:
+            # Interpolasi posisi presisi sub-second antar-poll
+            elapsed = now - info["poll_time"]
+            info["pos"] = min(info["dur"], info["pos"] + elapsed)
+            info["pct"] = int((info["pos"] / info["dur"] * 100)) if info["dur"] > 0 else 0
+        return info
 
 
 class Source(TokenSource):
@@ -399,6 +427,8 @@ class Source(TokenSource):
     def __init__(self, scope="today", project=None):
         super().__init__(scope=scope, project=project)
         self.audio_thread = None
+        self.media_thread = MediaInfoThread()
+        self.media_thread.start()
         self.has_real_audio = False
 
         # Async Lyrics Cache per track
@@ -434,7 +464,7 @@ class Source(TokenSource):
         return {"input": 0, "output": 0, "cache_read": 0, "cache_write": 0, "cost": 0.0, "requests": 0}
 
     def snapshot(self):
-        m = get_media_info()
+        m = self.media_thread.get_info()
         pos_m, pos_s = divmod(int(m["pos"]), 60)
         dur_m, dur_s = divmod(int(m["dur"]), 60)
         time_fmt = f"{pos_m}:{pos_s:02d}/{dur_m}:{dur_s:02d}"
@@ -457,7 +487,6 @@ class Source(TokenSource):
         # Transliterasi to ASCII
         safe_title = transliterate_to_ascii(m["title"])
         safe_artist = transliterate_to_ascii(m["artist"])
-        safe_line = transliterate_to_ascii(full_line)
         safe_word = transliterate_to_ascii(active_word)
 
         # Determine EQ String
@@ -467,18 +496,18 @@ class Source(TokenSource):
         else:
             eq_string = "1" if m["playing"] else "0"
 
-        # Format karaoke highlight tag for ESP32: line||active_word_idx
-        stage_karaoke_data = f"{safe_line}||{word_idx}||{safe_word}"
+        # Format single active word payload: active_word||word_idx/total_words
+        stage_karaoke_data = f"{safe_word}||{word_idx + 1}/{total_words}"
 
         return {
             "source": self.DISPLAY_NAME,
             "custom": {
-                # Page 1: Stage Karaoke + Spectrum Visualizer
+                # Page 1: Stage Single Word Karaoke + Spectrum Visualizer
                 "hdr": f"STAGE | {'PLAYING' if m['playing'] else 'PAUSED'}",
                 "eq": eq_string,
                 "l1": f"{safe_title} - {safe_artist}",
                 "l2": stage_karaoke_data,
-                "l3": f"W:{word_idx+1}/{total_words} [{safe_word}]",
+                "l3": safe_word,
                 "l4": time_fmt,
 
                 # Page 2: Details & Track Info
