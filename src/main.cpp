@@ -597,21 +597,21 @@ void drawStageKaraoke() {
         shakeY = (int)(eqRand((uint32_t)(ms / 50) + 7) % 3) - 1; // -1, 0, +1
     }
 
-    // 3. Blue Block Stage (Y=16..63): BIG Active Word Display (Size 2 Font)
+    // 3. Blue Block Stage (Y=16..63): Rock-Solid BIG Active Word Display (Size 2 Font)
     if (wordToDisplay.length() > 0) {
         if (wordToDisplay.length() <= 10) {
-            // Render BIG Text Size 2 (12x16px per char)
+            // Render BIG Text Size 2 (12x16px per char) - Stable & Crisp
             int charW = 12;
             int textW = wordToDisplay.length() * charW;
             int startX = (SCREEN_WIDTH - textW) / 2;
             if (startX < 0) startX = 0;
             display.setTextSize(2);
-            display.setCursor(startX + shakeX, 18 + shakeY);
+            display.setCursor(startX, 18);
             display.print(wordToDisplay);
             display.setTextSize(1);
         } else {
             // Fallback to Size 1 for long words
-            printCentered(wordToDisplay.c_str(), 22 + shakeY, 1);
+            printCentered(wordToDisplay.c_str(), 22, 1);
         }
     }
 
@@ -1004,9 +1004,6 @@ void handleLine(String line) {
                 incomingCustomScreen.subPage = 0;
             }
             customScreen = incomingCustomScreen;
-            Serial.print(F("[OK] Data diterima ("));
-            Serial.print(fieldsInBlock);
-            Serial.println(F(" field)"));
         } else {
             // 'END' tanpa field: jangan tandai ada data, nanti layar isinya 0.
             Serial.println(F("[WARN] END tanpa field, diabaikan"));
