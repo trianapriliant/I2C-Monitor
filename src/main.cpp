@@ -822,6 +822,11 @@ void pageCustomScreen() {
         return;
     }
 
+    if (customScreen.hdrTitle.startsWith("SPECTRUM")) {
+        drawSpectrumEqualizer();
+        return;
+    }
+
     if (customScreen.subPage == 0 && customScreen.eqBars.length() > 0) {
         drawSpectrumEqualizer();
         return;
