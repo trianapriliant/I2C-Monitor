@@ -53,20 +53,21 @@ class AudioCaptureThread(threading.Thread):
         super().__init__(daemon=True)
         self.device_id = device_id
         self.sample_rate = 44100
-        self.block_size = 2048  # ~46ms per block → ~21 FFT/detik
+        self.block_size = 1024  # ~23ms per block → ~43 FFT/detik (low-latency)
         self.num_bands = 20
         self.bands = [0] * self.num_bands
         self.lock = threading.Lock()
         self.running = True
 
         # Smoothing factor: higher = snappier response, lower = smoother
-        self.smooth = 0.35
+        # 0.6 = fast transient attack with mild smoothing to avoid jitter
+        self.smooth = 0.6
         self.smoothed = [0.0] * self.num_bands
 
         # Frequency bin edges (logarithmic distribution across 20 bands)
-        # 30 Hz - 16000 Hz split into 20 logarithmic bands
+        # 60 Hz - 16000 Hz — starts at 60Hz to match FFT resolution (44100/1024 ≈ 43Hz/bin)
         self.freq_edges = np.logspace(
-            np.log10(30), np.log10(16000), self.num_bands + 1
+            np.log10(60), np.log10(16000), self.num_bands + 1
         )
 
     def run(self):
@@ -77,6 +78,7 @@ class AudioCaptureThread(threading.Thread):
                 samplerate=self.sample_rate,
                 blocksize=self.block_size,
                 callback=self._audio_callback,
+                latency='low',
             ):
                 while self.running:
                     time.sleep(0.1)

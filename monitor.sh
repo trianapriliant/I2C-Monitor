@@ -91,7 +91,7 @@ start_source() {
     stop_monitor >/dev/null
     local interval=3
     if [ "$src" = "visualizer" ]; then
-        interval=0.08  # ~12fps untuk real-time audio FFT spectrum
+        interval=0.04  # ~25fps untuk real-time audio FFT spectrum (low-latency)
     elif [ "$src" = "spotify" ] || [ "$src" = "pomodoro" ] || [ "$src" = "companion" ] || [ "$src" = "network" ]; then
         interval=0.5
     fi
