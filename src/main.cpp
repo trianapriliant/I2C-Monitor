@@ -541,12 +541,13 @@ void drawSpectrumEqualizer() {
 }
 
 void drawStageKaraoke() {
-    drawHeader(customScreen.hdrTitle.c_str(), "", customScreen.hdrSub);
-
-    // 1. Song Title & Artist Marquee at Y = 16
-    if (customScreen.line1.length() > 0) {
-        drawMarqueeLine(0, 16, "", customScreen.line1);
+    // 1. Top Yellow Strip (Y=0..15): Dedicated Track Title & Artist Marquee
+    String trackInfo = customScreen.line1;
+    if (trackInfo.length() == 0) {
+        trackInfo = customScreen.hdrTitle;
     }
+    drawMarqueeLine(0, 0, "STAGE ", trackInfo);
+    display.drawFastHLine(0, 14, SCREEN_WIDTH, SSD1306_WHITE);
 
     // Parse Stage Karaoke payload: line_text||word_idx||active_word
     String lineText = "";
@@ -597,13 +598,12 @@ void drawStageKaraoke() {
         shakeY = (int)(eqRand((uint32_t)(ms / 50) + 7) % 3) - 1; // -1, 0, +1
     }
 
-    // 3. Render Karaoke Lyric Line with Word Focus at Y = 26
-    int lyricY = 26 + shakeY;
+    // 3. Blue Block Stage (Y=16..63): Spacious Karaoke & Visualizer
+    // Lyric Line at Y = 19
+    int lyricY = 19 + shakeY;
     if (lineText.length() > 0) {
-        // Format line with bracket around active word if found
         String dispLine = lineText;
         if (activeWord.length() > 0 && lineText.indexOf(activeWord) >= 0) {
-            // Truncate long lines to fit 21 chars on screen
             if (dispLine.length() > 21) {
                 int pos = dispLine.indexOf(activeWord);
                 if (pos > 10) {
@@ -619,17 +619,17 @@ void drawStageKaraoke() {
         printCentered(dispLine.c_str(), lyricY, 1);
     }
 
-    // Active Word Highlight Badge / Box at Y = 36
+    // Active Word Focus Badge at Y = 30
     if (activeWord.length() > 0) {
         String badge = "> " + activeWord + " <";
         int bw = badge.length() * 6 + 4;
         int bx = (SCREEN_WIDTH - bw) / 2;
-        display.drawRoundRect(bx, 35 + shakeY, bw, 9, 2, SSD1306_WHITE);
-        printCentered(badge.c_str(), 36 + shakeY, 1);
+        display.drawRoundRect(bx, 29 + shakeY, bw, 9, 2, SSD1306_WHITE);
+        printCentered(badge.c_str(), 30 + shakeY, 1);
     }
 
-    // 4. Dancing Line Animation (Wavy Sine Line) at Y = 46
-    int waveY = 46;
+    // 4. Beat-Reactive Dancing Line Animation at Y = 42
+    int waveY = 42;
     int amplitude = (bassEnergy >= 5) ? 3 : 1;
     for (int x = 0; x < SCREEN_WIDTH; x += 2) {
         int angle = (int)(x * 12 + ms * 8 / 10);
@@ -638,13 +638,13 @@ void drawStageKaraoke() {
         display.drawPixel(x + 1, waveY + dy, SSD1306_WHITE);
     }
 
-    // 5. Compact 20-Band Equalizer at Floor Y = 49..63 (15px height)
+    // 5. Compact 20-Band Equalizer at Floor Y = 46..63 (17px height)
     int numBars = 20;
     int barWidth = 4;
     int barGap = 2;
     int segHeight = 2;
     int segGap = 1;
-    int maxSegs = 5;
+    int maxSegs = 6;
     int totalWidth = numBars * barWidth + (numBars - 1) * barGap; // 118
     int startX = (SCREEN_WIDTH - totalWidth) / 2;
     int floorY = 63;
@@ -652,14 +652,14 @@ void drawStageKaraoke() {
     for (int i = 0; i < numBars; i++) {
         int v = 0;
         if (hasRealData) {
-            v = realVals[i] / 2; // scale 0-10 -> 0-5
+            v = realVals[i] * 6 / 10; // scale 0-10 -> 0-6
             if (v < 0) v = 0;
             if (v > maxSegs) v = maxSegs;
         } else if (bassEnergy > 0) {
             int t = (int)(ms / 40);
             int w1 = fastSin(t * 7 + i * 51) * 3 / 255;
             int w2 = fastSin(t * 11 - i * 37) * 2 / 255;
-            v = w1 + w2 + 2;
+            v = w1 + w2 + 3;
             if (v < 1) v = 1;
             if (v > maxSegs) v = maxSegs;
         } else {

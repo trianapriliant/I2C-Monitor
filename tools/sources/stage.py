@@ -5,6 +5,7 @@ Menggabungkan Real-Time Audio Spectrum Equalizer (FFT via BlackHole) + Synced Sp
 dengan Word-by-Word Karaoke Engine, Beat Shaking, dan Dancing Line Animations.
 """
 
+import json
 import math
 import re
 import subprocess
@@ -188,14 +189,12 @@ LYRICS_OFFSET = 0.7
 
 
 def clean_song_title(title):
-    t = re.sub(
-        r"\s*-\s*(Remastered|Live|Deluxe|Single Version|Radio Edit|Bonus Track).*",
-        "",
-        title,
-        flags=re.IGNORECASE,
-    )
-    t = re.sub(r"\s*\[(Official Audio|Official Video|Audio|Video)\].*", "", t, flags=re.IGNORECASE)
-    t = re.sub(r"\s*\(feat\..*?\)", "", t, flags=re.IGNORECASE)
+    # Remove (...) and [...]
+    t = re.sub(r"\s*[\(\[].*?[\)\]]", "", title)
+    # Remove "- 2020 Remaster", "- Live", "- Deluxe", "- Single Version", "- Radio Edit", etc.
+    t = re.sub(r"\s*-\s*.*?(remaster|live|deluxe|version|edit|edition|mono|stereo).*", "", t, flags=re.IGNORECASE)
+    # Remove "feat. ...", "ft. ...", "with ..."
+    t = re.sub(r"\s+(feat\.|ft\.|with)\s+.*", "", t, flags=re.IGNORECASE)
     return t.strip()
 
 
@@ -207,9 +206,8 @@ def parse_lrc(lrc_text):
             mins = float(m.group(1))
             secs = float(m.group(2))
             text = m.group(3).strip()
-            total_sec = mins * 60.0 + secs
             if text:
-                lines.append((total_sec, text))
+                lines.append((mins * 60.0 + secs, text))
     lines.sort(key=lambda x: x[0])
     return lines
 
@@ -219,41 +217,73 @@ def fetch_synced_lyrics(title, artist, album="", duration=0):
         return []
 
     c_title = clean_song_title(title)
-    key = f"{c_title.lower()}||{artist.lower()}"
+    c_artist = artist.strip()
+    primary_artist = re.split(r"[,&/]", c_artist)[0].strip()
+
+    key = f"{c_title.lower()}|{c_artist.lower()}"
     now = time.time()
 
     if key in LYRICS_CACHE:
-        cached_time, cached_data = LYRICS_CACHE[key]
-        if cached_data or (now - cached_time) < 60:
-            return cached_data
+        ts, data = LYRICS_CACHE[key]
+        if data:
+            return data
+        if (now - ts) < 10:
+            return []
 
-    try:
-        query = urllib.parse.urlencode({"track_name": c_title, "artist_name": artist})
-        url = f"https://lrclib.net/api/get?{query}"
-        req = urllib.request.Request(url, headers={"User-Agent": "I2C-OLED-Stage/1.0"})
-        with urllib.request.urlopen(req, timeout=3) as resp:
-            data = json.loads(resp.read().decode())
-            if data.get("syncedLyrics"):
-                parsed = parse_lrc(data["syncedLyrics"])
-                if parsed:
-                    LYRICS_CACHE[key] = (now, parsed)
-                    return parsed
-    except Exception:
-        pass
-
-    try:
-        query = urllib.parse.urlencode({"q": f"{c_title} {artist}"})
-        url = f"https://lrclib.net/api/search?{query}"
-        req = urllib.request.Request(url, headers={"User-Agent": "I2C-OLED-Stage/1.0"})
-        with urllib.request.urlopen(req, timeout=3) as resp:
-            data = json.loads(resp.read().decode())
-            if isinstance(data, list) and len(data) > 0:
-                for item in data:
-                    if item.get("syncedLyrics"):
-                        parsed = parse_lrc(item["syncedLyrics"])
+    # Strategy 1: Direct GET API dengan duration
+    for a_name in (c_artist, primary_artist):
+        params = {"track_name": c_title, "artist_name": a_name}
+        if duration > 0:
+            params["duration"] = str(int(duration))
+        url = "https://lrclib.net/api/get?" + urllib.parse.urlencode(params)
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "SpotifyBar/1.0"})
+            with urllib.request.urlopen(req, timeout=3) as resp:
+                if resp.status == 200:
+                    d = json.loads(resp.read().decode("utf-8"))
+                    lrc = d.get("syncedLyrics") or d.get("plainLyrics")
+                    if lrc:
+                        parsed = parse_lrc(lrc)
                         if parsed:
                             LYRICS_CACHE[key] = (now, parsed)
                             return parsed
+        except Exception:
+            pass
+
+    # Strategy 2: Direct GET API tanpa duration
+    for a_name in (c_artist, primary_artist):
+        params = {"track_name": c_title, "artist_name": a_name}
+        url = "https://lrclib.net/api/get?" + urllib.parse.urlencode(params)
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "SpotifyBar/1.0"})
+            with urllib.request.urlopen(req, timeout=3) as resp:
+                if resp.status == 200:
+                    d = json.loads(resp.read().decode("utf-8"))
+                    lrc = d.get("syncedLyrics") or d.get("plainLyrics")
+                    if lrc:
+                        parsed = parse_lrc(lrc)
+                        if parsed:
+                            LYRICS_CACHE[key] = (now, parsed)
+                            return parsed
+        except Exception:
+            pass
+
+    # Strategy 3: SEARCH API
+    query_str = f"{c_title} {primary_artist}"
+    url = "https://lrclib.net/api/search?q=" + urllib.parse.quote(query_str)
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "SpotifyBar/1.0"})
+        with urllib.request.urlopen(req, timeout=3) as resp:
+            if resp.status == 200:
+                items = json.loads(resp.read().decode("utf-8"))
+                if isinstance(items, list):
+                    for item in items:
+                        lrc = item.get("syncedLyrics") or item.get("plainLyrics")
+                        if lrc:
+                            parsed = parse_lrc(lrc)
+                            if parsed:
+                                LYRICS_CACHE[key] = (now, parsed)
+                                return parsed
     except Exception:
         pass
 
@@ -371,6 +401,11 @@ class Source(TokenSource):
         self.audio_thread = None
         self.has_real_audio = False
 
+        # Async Lyrics Cache per track
+        self.current_track_key = None
+        self.active_lyrics = []
+        self.fetching = False
+
         if HAS_AUDIO:
             device_id = find_blackhole_device()
             if device_id is not None:
@@ -381,6 +416,16 @@ class Source(TokenSource):
                     print(f"[INFO] Stage Audio FFT via BlackHole (device #{device_id})")
                 except Exception as e:
                     print(f"[WARN] Gagal start stage audio FFT: {e}")
+
+    def _async_fetch(self, title, artist, album, dur):
+        self.fetching = True
+        try:
+            lyrics = fetch_synced_lyrics(title, artist, album, dur)
+            self.active_lyrics = lyrics
+        except Exception:
+            pass
+        finally:
+            self.fetching = False
 
     def available(self):
         return True
@@ -394,9 +439,20 @@ class Source(TokenSource):
         dur_m, dur_s = divmod(int(m["dur"]), 60)
         time_fmt = f"{pos_m}:{pos_s:02d}/{dur_m}:{dur_s:02d}"
 
-        # Synced Lyrics + Word Karaoke
-        lyrics = fetch_synced_lyrics(m["title"], m["artist"], m["album"], m["dur"])
-        full_line, active_word, word_idx, total_words = calculate_word_karaoke(lyrics, m["pos"])
+        # Trigger async lyrics fetch if track changed or lyrics not yet loaded
+        track_key = f"{m['title']}||{m['artist']}"
+        valid_track = m["title"] not in ("No Media", "Paused", "Tidak Ada Media")
+
+        if valid_track and (track_key != self.current_track_key or (not self.active_lyrics and not self.fetching)):
+            self.current_track_key = track_key
+            threading.Thread(
+                target=self._async_fetch,
+                args=(m["title"], m["artist"], m["album"], m["dur"]),
+                daemon=True,
+            ).start()
+
+        # Synced Lyrics + Word Karaoke from cached active_lyrics
+        full_line, active_word, word_idx, total_words = calculate_word_karaoke(self.active_lyrics, m["pos"])
 
         # Transliterasi to ASCII
         safe_title = transliterate_to_ascii(m["title"])
