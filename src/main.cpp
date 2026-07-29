@@ -679,12 +679,13 @@ void drawStageKaraoke() {
 }
 
 void pageCustomScreen() {
+    if (customScreen.hdrTitle.startsWith("STAGE")) {
+        drawStageKaraoke();
+        return;
+    }
+
     if (customScreen.subPage == 0 && customScreen.eqBars.length() > 0) {
-        if (customScreen.hdrTitle.startsWith("STAGE")) {
-            drawStageKaraoke();
-        } else {
-            drawSpectrumEqualizer();
-        }
+        drawSpectrumEqualizer();
         return;
     }
 

@@ -502,20 +502,13 @@ class Source(TokenSource):
         return {
             "source": self.DISPLAY_NAME,
             "custom": {
-                # Page 1: Stage Single Word Karaoke + Spectrum Visualizer
+                # Stage Single Word Karaoke + Spectrum Visualizer
                 "hdr": f"STAGE | {'PLAYING' if m['playing'] else 'PAUSED'}",
                 "eq": eq_string,
                 "l1": f"{safe_title} - {safe_artist}",
                 "l2": stage_karaoke_data,
                 "l3": safe_word,
                 "l4": time_fmt,
-
-                # Page 2: Details & Track Info
-                "p2_hdr": f"STAGE DET | {time_fmt}",
-                "p2_l1": f"Lagu : {safe_title[:16]}",
-                "p2_l2": f"Artis: {safe_artist[:16]}",
-                "p2_l3": f"Word : {safe_word[:16]}",
-                "p2_l4": f"Audio: {'REALTIME' if self.has_real_audio else 'PROCEDURAL'}",
             },
             "plan": "Stage",
             "model": safe_title[:16],
