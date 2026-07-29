@@ -25,6 +25,7 @@ from sources import (
     calendar,
     docker,
     worldclock,
+    stage,
 )
 
 _REGISTRY = {
@@ -45,6 +46,7 @@ _REGISTRY = {
     calendar.NAME: calendar.Source,
     docker.NAME: docker.Source,
     worldclock.NAME: worldclock.Source,
+    stage.NAME: stage.Source,
 }
 
 

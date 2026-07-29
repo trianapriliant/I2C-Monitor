@@ -90,8 +90,8 @@ start_source() {
     require_deps
     stop_monitor >/dev/null
     local interval=3
-    if [ "$src" = "visualizer" ]; then
-        interval=0.04  # ~25fps untuk real-time audio FFT spectrum (low-latency)
+    if [ "$src" = "visualizer" ] || [ "$src" = "stage" ]; then
+        interval=0.04  # ~25fps untuk real-time audio FFT spectrum & karaoke stage (low-latency)
     elif [ "$src" = "spotify" ] || [ "$src" = "pomodoro" ] || [ "$src" = "companion" ] || [ "$src" = "network" ]; then
         interval=0.5
     fi
@@ -129,6 +129,7 @@ interactive_menu() {
     echo "15) Agenda Calendar & Meeting Alert"
     echo "16) Docker Containers & Local Servers"
     echo "17) World Clock Multi-Timezone"
+    echo "18) Stage Karaoke & Beat Sync Visualizer"
     echo "99) Rotasi Otomatis (Semua Mode)"
     echo " 0) Stop Monitor"
     echo "========================================"
@@ -152,6 +153,7 @@ interactive_menu() {
         15) start_source "calendar" ;;
         16) start_source "docker" ;;
         17) start_source "worldclock" ;;
+        18) start_source "stage" ;;
         99)
             stop_monitor >/dev/null
             nohup python3 -u tools/token_monitor.py --rotate 10 --interval 3 > "$LOG" 2>&1 &

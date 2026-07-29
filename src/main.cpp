@@ -540,9 +540,164 @@ void drawSpectrumEqualizer() {
     }
 }
 
+void drawStageKaraoke() {
+    drawHeader(customScreen.hdrTitle.c_str(), "", customScreen.hdrSub);
+
+    // 1. Song Title & Artist Marquee at Y = 16
+    if (customScreen.line1.length() > 0) {
+        drawMarqueeLine(0, 16, "", customScreen.line1);
+    }
+
+    // Parse Stage Karaoke payload: line_text||word_idx||active_word
+    String lineText = "";
+    int activeWordIdx = 0;
+    String activeWord = "";
+
+    String l2 = customScreen.line2;
+    int p1 = l2.indexOf("||");
+    int p2 = (p1 >= 0) ? l2.indexOf("||", p1 + 2) : -1;
+
+    if (p1 >= 0 && p2 > p1) {
+        lineText = l2.substring(0, p1);
+        activeWordIdx = l2.substring(p1 + 2, p2).toInt();
+        activeWord = l2.substring(p2 + 2);
+    } else {
+        lineText = l2;
+        activeWord = customScreen.line3;
+    }
+
+    // 2. Parse FFT bass energy for Beat Shaking
+    int bassEnergy = 0;
+    int realVals[20] = {0};
+    bool hasRealData = (customScreen.eqBars.indexOf(',') >= 0);
+
+    if (hasRealData) {
+        int idx = 0, lastPos = 0;
+        String str = customScreen.eqBars;
+        for (int i = 0; i <= (int)str.length() && idx < 20; i++) {
+            if (i == (int)str.length() || str.charAt(i) == ',') {
+                realVals[idx] = str.substring(lastPos, i).toInt();
+                idx++;
+                lastPos = i + 1;
+            }
+        }
+        // Bass average from bands 0..3
+        bassEnergy = (realVals[0] + realVals[1] + realVals[2] + realVals[3]) / 4;
+    } else if (customScreen.eqBars == "1") {
+        // Procedural beat pulse every ~400ms
+        bassEnergy = ((millis() / 200) % 2 == 0) ? 7 : 2;
+    }
+
+    // Beat Micro-Shaking Offset
+    unsigned long ms = millis();
+    int shakeX = 0;
+    int shakeY = 0;
+    if (bassEnergy >= 5) {
+        shakeX = (int)(eqRand((uint32_t)(ms / 50) + 1) % 3) - 1; // -1, 0, +1
+        shakeY = (int)(eqRand((uint32_t)(ms / 50) + 7) % 3) - 1; // -1, 0, +1
+    }
+
+    // 3. Render Karaoke Lyric Line with Word Focus at Y = 26
+    int lyricY = 26 + shakeY;
+    if (lineText.length() > 0) {
+        // Format line with bracket around active word if found
+        String dispLine = lineText;
+        if (activeWord.length() > 0 && lineText.indexOf(activeWord) >= 0) {
+            // Truncate long lines to fit 21 chars on screen
+            if (dispLine.length() > 21) {
+                int pos = dispLine.indexOf(activeWord);
+                if (pos > 10) {
+                    dispLine = ".." + dispLine.substring(pos - 6);
+                }
+                if (dispLine.length() > 21) {
+                    dispLine = dispLine.substring(0, 21);
+                }
+            }
+        } else if (dispLine.length() > 21) {
+            dispLine = dispLine.substring(0, 21);
+        }
+        printCentered(dispLine.c_str(), lyricY, 1);
+    }
+
+    // Active Word Highlight Badge / Box at Y = 36
+    if (activeWord.length() > 0) {
+        String badge = "> " + activeWord + " <";
+        int bw = badge.length() * 6 + 4;
+        int bx = (SCREEN_WIDTH - bw) / 2;
+        display.drawRoundRect(bx, 35 + shakeY, bw, 9, 2, SSD1306_WHITE);
+        printCentered(badge.c_str(), 36 + shakeY, 1);
+    }
+
+    // 4. Dancing Line Animation (Wavy Sine Line) at Y = 46
+    int waveY = 46;
+    int amplitude = (bassEnergy >= 5) ? 3 : 1;
+    for (int x = 0; x < SCREEN_WIDTH; x += 2) {
+        int angle = (int)(x * 12 + ms * 8 / 10);
+        int dy = (fastSin(angle) * amplitude) / 255;
+        display.drawPixel(x, waveY + dy, SSD1306_WHITE);
+        display.drawPixel(x + 1, waveY + dy, SSD1306_WHITE);
+    }
+
+    // 5. Compact 20-Band Equalizer at Floor Y = 49..63 (15px height)
+    int numBars = 20;
+    int barWidth = 4;
+    int barGap = 2;
+    int segHeight = 2;
+    int segGap = 1;
+    int maxSegs = 5;
+    int totalWidth = numBars * barWidth + (numBars - 1) * barGap; // 118
+    int startX = (SCREEN_WIDTH - totalWidth) / 2;
+    int floorY = 63;
+
+    for (int i = 0; i < numBars; i++) {
+        int v = 0;
+        if (hasRealData) {
+            v = realVals[i] / 2; // scale 0-10 -> 0-5
+            if (v < 0) v = 0;
+            if (v > maxSegs) v = maxSegs;
+        } else if (bassEnergy > 0) {
+            int t = (int)(ms / 40);
+            int w1 = fastSin(t * 7 + i * 51) * 3 / 255;
+            int w2 = fastSin(t * 11 - i * 37) * 2 / 255;
+            v = w1 + w2 + 2;
+            if (v < 1) v = 1;
+            if (v > maxSegs) v = maxSegs;
+        } else {
+            v = (i % 5 == 0) ? 1 : 0;
+        }
+
+        if (v >= eqPeaks[i]) {
+            eqPeaks[i] = v;
+        }
+
+        int x = startX + i * (barWidth + barGap);
+
+        for (int s = 0; s < v; s++) {
+            int y = floorY - (s * (segHeight + segGap)) - segHeight;
+            display.fillRect(x, y, barWidth, segHeight, SSD1306_WHITE);
+        }
+
+        if (eqPeaks[i] > 0) {
+            int peakY = floorY - (eqPeaks[i] * (segHeight + segGap)) - segHeight;
+            display.drawFastHLine(x, peakY, barWidth, SSD1306_WHITE);
+        }
+    }
+
+    if (ms - lastEqPeakDecay > 120) {
+        lastEqPeakDecay = ms;
+        for (int i = 0; i < 20; i++) {
+            if (eqPeaks[i] > 0) eqPeaks[i]--;
+        }
+    }
+}
+
 void pageCustomScreen() {
     if (customScreen.subPage == 0 && customScreen.eqBars.length() > 0) {
-        drawSpectrumEqualizer();
+        if (customScreen.hdrTitle.startsWith("STAGE")) {
+            drawStageKaraoke();
+        } else {
+            drawSpectrumEqualizer();
+        }
         return;
     }
 

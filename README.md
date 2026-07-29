@@ -35,6 +35,7 @@ tools/
     calendar.py            macOS Calendar & Meeting Alert (Countdown Rapat Terdekat)
     docker.py              Docker Containers & Server Status (Running/Exited & Memory)
     worldclock.py          World Clock Multi-Timezone (WIB, JST, GMT, PST, EST, AEST)
+    stage.py               Stage Karaoke & Beat Sync Visualizer (Lirik Per Kata, Beat Shake & Dancing Line)
 ```
 
 Pemisahannya: **source** di folder `tools/sources/` mengatur pengambilan data di komputer, dan **firmware** `src/main.cpp` menangani rendering grafik OLED di ESP32.
