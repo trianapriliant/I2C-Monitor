@@ -36,6 +36,7 @@ tools/
     docker.py              Docker Containers & Server Status (Running/Exited & Memory)
     worldclock.py          World Clock Multi-Timezone (WIB, JST, GMT, PST, EST, AEST)
     stage.py               Stage Karaoke & Beat Sync Visualizer (Lirik Per Kata, Beat Shake & Dancing Line)
+    video.py               Video Animation & 3D FX Streamer (3D Starfield Warp, 3D Cube, Synthwave Grid & Bad Apple)
 ```
 
 Pemisahannya: **source** di folder `tools/sources/` mengatur pengambilan data di komputer, dan **firmware** `src/main.cpp` menangani rendering grafik OLED di ESP32.

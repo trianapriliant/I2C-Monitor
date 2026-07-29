@@ -678,9 +678,147 @@ void drawStageKaraoke() {
     }
 }
 
+void drawVideoDisplay() {
+    // 1. Top Yellow Strip (Y=0..15): Dedicated Marquee Header
+    String presetTitle = customScreen.hdrTitle;
+    if (presetTitle.startsWith("VIDEO | ")) {
+        presetTitle = presetTitle.substring(8);
+    }
+    drawMarqueeLine(0, 0, "VIDEO ", presetTitle);
+    display.drawFastHLine(0, 14, SCREEN_WIDTH, SSD1306_WHITE);
+
+    // Parse preset index from customScreen.eqBars or line2
+    int presetIdx = 0;
+    int comma = customScreen.eqBars.indexOf(',');
+    if (comma > 0) {
+        presetIdx = customScreen.eqBars.substring(0, comma).toInt();
+    }
+
+    unsigned long ms = millis();
+    int cx = 64;
+    int cy = 39;
+
+    if (presetIdx == 0) {
+        // Preset 0: Starfield 3D Warp
+        static struct Star3D { float x, y, z; } stars[36];
+        static bool initialized = false;
+        if (!initialized) {
+            for (int i = 0; i < 36; i++) {
+                stars[i].x = (float)((eqRand(i * 17 + 1) % 160) - 80);
+                stars[i].y = (float)((eqRand(i * 31 + 3) % 100) - 50);
+                stars[i].z = (float)((eqRand(i * 47 + 5) % 100) + 1);
+            }
+            initialized = true;
+        }
+
+        for (int i = 0; i < 36; i++) {
+            stars[i].z -= 2.5f;
+            if (stars[i].z <= 1.0f) {
+                stars[i].x = (float)((eqRand((uint32_t)(ms + i * 13)) % 160) - 80);
+                stars[i].y = (float)((eqRand((uint32_t)(ms + i * 29)) % 100) - 50);
+                stars[i].z = 100.0f;
+            }
+
+            float k = 40.0f / stars[i].z;
+            int px = (int)(cx + stars[i].x * k);
+            int py = (int)(cy + stars[i].y * k);
+
+            if (px >= 0 && px < SCREEN_WIDTH && py >= 16 && py < SCREEN_HEIGHT) {
+                display.drawPixel(px, py, SSD1306_WHITE);
+                if (stars[i].z < 30.0f) {
+                    int prevPx = (int)(cx + stars[i].x * (40.0f / (stars[i].z + 4.0f)));
+                    int prevPy = (int)(cy + stars[i].y * (40.0f / (stars[i].z + 4.0f)));
+                    display.drawLine(px, py, prevPx, prevPy, SSD1306_WHITE);
+                }
+            }
+        }
+    } else if (presetIdx == 1) {
+        // Preset 1: 3D Rotating Wireframe Cube
+        float angleX = ms * 0.0015f;
+        float angleY = ms * 0.0022f;
+        float angleZ = ms * 0.0009f;
+
+        float vertices[8][3] = {
+            {-15, -15, -15}, { 15, -15, -15}, { 15,  15, -15}, {-15,  15, -15},
+            {-15, -15,  15}, { 15, -15,  15}, { 15,  15,  15}, {-15,  15,  15}
+        };
+
+        int edges[12][2] = {
+            {0,1}, {1,2}, {2,3}, {3,0},
+            {4,5}, {5,6}, {6,7}, {7,4},
+            {0,4}, {1,5}, {2,6}, {3,7}
+        };
+
+        int projX[8];
+        int projY[8];
+
+        for (int i = 0; i < 8; i++) {
+            float x = vertices[i][0];
+            float y = vertices[i][1];
+            float z = vertices[i][2];
+
+            float y1 = y * cos(angleX) - z * sin(angleX);
+            float z1 = y * sin(angleX) + z * cos(angleX);
+
+            float x2 = x * cos(angleY) + z1 * sin(angleY);
+            float z2 = -x * sin(angleY) + z1 * cos(angleY);
+
+            float x3 = x2 * cos(angleZ) - y1 * sin(angleZ);
+            float y3 = x2 * sin(angleZ) + y1 * cos(angleZ);
+
+            float distance = 60.0f;
+            float fov = 40.0f;
+            float scale = fov / (distance + z2);
+
+            projX[i] = (int)(cx + x3 * scale);
+            projY[i] = (int)(cy + y3 * scale);
+        }
+
+        for (int e = 0; e < 12; e++) {
+            int v1 = edges[e][0];
+            int v2 = edges[e][1];
+            display.drawLine(projX[v1], projY[v1], projX[v2], projY[v2], SSD1306_WHITE);
+        }
+    } else if (presetIdx == 2) {
+        // Preset 2: Retro Synthwave 3D Grid & Sun
+        display.drawCircle(cx, 26, 8, SSD1306_WHITE);
+        display.drawFastHLine(cx - 10, 26, 20, SSD1306_BLACK);
+        display.drawFastHLine(0, 32, SCREEN_WIDTH, SSD1306_WHITE);
+
+        for (int x = -100; x <= 228; x += 16) {
+            display.drawLine(64, 32, x, 63, SSD1306_WHITE);
+        }
+
+        int scrollOffset = (int)(ms / 30) % 8;
+        for (int y = 33 + scrollOffset; y < 64; y += (y - 30) / 3 + 1) {
+            display.drawFastHLine(0, y, SCREEN_WIDTH, SSD1306_WHITE);
+        }
+    } else {
+        // Preset 3: Bad Apple / Dancing Vector Sprite
+        int frame = (int)(ms / 100) % 8;
+        int poseY = (int)(fastSin(ms * 12 / 10) * 3) / 255;
+
+        display.drawCircle(cx, 24 + poseY, 5, SSD1306_WHITE);
+        display.drawLine(cx, 29 + poseY, cx, 43 + poseY, SSD1306_WHITE);
+        int armAngle = (int)(fastSin(ms * 15 / 10) * 12) / 255;
+        display.drawLine(cx, 33 + poseY, cx - 12, 30 + armAngle + poseY, SSD1306_WHITE);
+        display.drawLine(cx, 33 + poseY, cx + 12, 30 - armAngle + poseY, SSD1306_WHITE);
+        int legStep = (frame % 2 == 0) ? 6 : -4;
+        display.drawLine(cx, 43 + poseY, cx - 8 + legStep, 58, SSD1306_WHITE);
+        display.drawLine(cx, 43 + poseY, cx + 8 - legStep, 58, SSD1306_WHITE);
+
+        printCentered("BAD APPLE ANIMATION", 56, 1);
+    }
+}
+
 void pageCustomScreen() {
     if (customScreen.hdrTitle.startsWith("STAGE")) {
         drawStageKaraoke();
+        return;
+    }
+
+    if (customScreen.hdrTitle.startsWith("VIDEO")) {
+        drawVideoDisplay();
         return;
     }
 

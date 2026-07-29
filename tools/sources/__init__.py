@@ -26,6 +26,7 @@ from sources import (
     docker,
     worldclock,
     stage,
+    video,
 )
 
 _REGISTRY = {
@@ -47,6 +48,7 @@ _REGISTRY = {
     docker.NAME: docker.Source,
     worldclock.NAME: worldclock.Source,
     stage.NAME: stage.Source,
+    video.NAME: video.Source,
 }
 
 
