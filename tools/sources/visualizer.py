@@ -59,8 +59,12 @@ class AudioCaptureThread(threading.Thread):
         self.lock = threading.Lock()
         self.running = True
 
+        # Smoothing factor: higher = snappier response, lower = smoother
+        self.smooth = 0.35
+        self.smoothed = [0.0] * self.num_bands
+
         # Frequency bin edges (logarithmic distribution across 20 bands)
-        # 20 Hz - 20000 Hz split into 20 logarithmic bands
+        # 30 Hz - 16000 Hz split into 20 logarithmic bands
         self.freq_edges = np.logspace(
             np.log10(30), np.log10(16000), self.num_bands + 1
         )
@@ -103,14 +107,19 @@ class AudioCaptureThread(threading.Thread):
                 else:
                     magnitude = 0.0
 
-                # Scale to 0-10 (log scale for better visual dynamics)
-                if magnitude > 0:
+                # Scale to 0-10 with wider dynamic range for better visual contrast
+                if magnitude > 1e-8:
                     db = 20 * np.log10(magnitude + 1e-10)
-                    # Normalize: silence ~= -60dB, loud ~= 0dB
-                    val = int((db + 50) / 5.0)
-                    val = max(0, min(10, val))
+                    # Map dB range: -10dB (quiet) → 0, +25dB (loud peak) → 10
+                    raw = (db + 10) / 3.5
+                    raw = max(0.0, min(10.0, raw))
                 else:
-                    val = 0
+                    raw = 0.0
+
+                # Exponential smoothing for fluid bar animation
+                self.smoothed[i] = self.smoothed[i] * (1 - self.smooth) + raw * self.smooth
+                val = int(round(self.smoothed[i]))
+                val = max(0, min(10, val))
                 new_bands.append(val)
 
             with self.lock:
