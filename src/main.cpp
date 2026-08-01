@@ -1017,7 +1017,7 @@ void drawNcsCircleVisualizer() {
     drawMarqueeLine(0, 0, "NCS ", info);
     display.drawFastHLine(0, 14, SCREEN_WIDTH, SSD1306_WHITE);
 
-    // 2. Parse FFT Data
+    // 2. Parse FFT Data (20 Bands)
     int realVals[20] = {0};
     bool hasRealData = (customScreen.eqBars.indexOf(',') >= 0);
 
@@ -1034,69 +1034,123 @@ void drawNcsCircleVisualizer() {
     }
 
     int bassEnergy = 0;
+    int midEnergy = 0;
     if (hasRealData) {
         bassEnergy = (realVals[0] + realVals[1] + realVals[2] + realVals[3]) / 4;
+        midEnergy = (realVals[4] + realVals[5] + realVals[6] + realVals[7] + realVals[8]) / 5;
     } else if (customScreen.eqBars == "1") {
         bassEnergy = ((millis() / 200) % 2 == 0) ? 7 : 2;
+        midEnergy = ((millis() / 150) % 3 == 0) ? 6 : 3;
     }
 
-    // Center of Circle
     int cx = 64;
     int cy = 39;
     unsigned long ms = millis();
 
-    // Bass-driven pulsing radius (base radius expands from 11px up to 16px)
-    int baseRadius = 11 + (bassEnergy * 5 / 10);
+    // Base Pulsing Sphere Radius
+    int baseRadius = 10 + (bassEnergy * 5 / 10); // 10..15px
 
-    // Inner Pulsing Ring Core (NCS Sphere style)
+    // -------------------------------------------------------------------
+    // Layer A: 3D Interlocking Rotating Mesh Rings (Spherical Latitude Grid)
+    // -------------------------------------------------------------------
+    float rot3D = (ms % 6000) * (2.0f * M_PI / 6000.0f);
+
+    // Tilted Ring 1 (Latitude 45 deg)
+    float rx1 = baseRadius * 1.3f;
+    float ry1 = baseRadius * 0.5f;
+    for (int deg = 0; deg < 360; deg += 20) {
+        float rad = deg * (M_PI / 180.0f) + rot3D;
+        int px = cx + (int)(cos(rad) * rx1);
+        int py = cy + (int)(sin(rad) * ry1);
+        if (px >= 0 && px < SCREEN_WIDTH && py >= 16 && py < SCREEN_HEIGHT) {
+            display.drawPixel(px, py, SSD1306_WHITE);
+        }
+    }
+
+    // Tilted Ring 2 (Latitude -45 deg)
+    float rx2 = baseRadius * 0.6f;
+    float ry2 = baseRadius * 1.2f;
+    for (int deg = 0; deg < 360; deg += 20) {
+        float rad = deg * (M_PI / 180.0f) - rot3D * 1.3f;
+        int px = cx + (int)(cos(rad) * rx2);
+        int py = cy + (int)(sin(rad) * ry2);
+        if (px >= 0 && px < SCREEN_WIDTH && py >= 16 && py < SCREEN_HEIGHT) {
+            display.drawPixel(px, py, SSD1306_WHITE);
+        }
+    }
+
+    // Inner Pulsing Core
     display.drawCircle(cx, cy, baseRadius, SSD1306_WHITE);
-    display.drawCircle(cx, cy, max(2, baseRadius - 3), SSD1306_WHITE);
-    display.fillCircle(cx, cy, max(1, baseRadius - 6), SSD1306_WHITE);
+    display.drawCircle(cx, cy, max(2, baseRadius - 4), SSD1306_WHITE);
+    display.fillCircle(cx, cy, max(1, baseRadius - 7), SSD1306_WHITE);
 
-    // 24 Radial Spectrum Rays radiating outwards around 360 degrees
-    int numRays = 24;
-    float angleStep = (2.0f * M_PI) / numRays;
-    // Slow rotational offset to give dynamic spinning NCS sphere vibe
-    float rotOffset = (ms % 10000) * (2.0f * M_PI / 10000.0f);
+    // -------------------------------------------------------------------
+    // Layer B: 36-Point Organic Audio Wave Perimeter (Continuous Outer Wave Aura)
+    // -------------------------------------------------------------------
+    int numPoints = 36;
+    float step = (2.0f * M_PI) / numPoints;
+    float rotWave = (ms % 8000) * (2.0f * M_PI / 8000.0f);
 
-    for (int i = 0; i < numRays; i++) {
-        float angle = i * angleStep + rotOffset;
+    int prevWX = 0, prevWY = 0;
+    int firstWX = 0, firstWY = 0;
+
+    for (int i = 0; i < numPoints; i++) {
+        float angle = i * step + rotWave;
         float cosA = cos(angle);
         float sinA = sin(angle);
 
-        // Map ray index to 20 FFT bands
-        int bandIdx = i % 20;
+        int bandIdx = (i % 20);
         int val = 0;
         if (hasRealData) {
             val = realVals[bandIdx];
         } else if (bassEnergy > 0) {
             int t = (int)(ms / 40);
-            val = (fastSin(t * 7 + i * 45) * 4 / 255) + 3;
+            val = (fastSin(t * 7 + i * 37) * 5 / 255) + 3;
         }
 
-        // Ray length extending outwards
-        int spikeLen = val * 12 / 10; // 0 to 12 pixels length
+        // Spike / Wave Amplitude
+        int spikeLen = (val * 13 / 10);
         if (spikeLen < 1) spikeLen = 1;
 
+        // Radial ray line outwards
         int x1 = cx + (int)(cosA * baseRadius);
         int y1 = cy + (int)(sinA * baseRadius);
         int x2 = cx + (int)(cosA * (baseRadius + spikeLen));
         int y2 = cy + (int)(sinA * (baseRadius + spikeLen));
 
-        // Draw radial spectrum ray line
         if (x1 >= 0 && x1 < SCREEN_WIDTH && y1 >= 16 && y1 < SCREEN_HEIGHT &&
             x2 >= 0 && x2 < SCREEN_WIDTH && y2 >= 16 && y2 < SCREEN_HEIGHT) {
             display.drawLine(x1, y1, x2, y2, SSD1306_WHITE);
         }
 
-        // Floating peak particle dot at tip
-        if (val > 4) {
-            int peakX = cx + (int)(cosA * (baseRadius + spikeLen + 3));
-            int peakY = cy + (int)(sinA * (baseRadius + spikeLen + 3));
-            if (peakX >= 0 && peakX < SCREEN_WIDTH && peakY >= 16 && peakY < SCREEN_HEIGHT) {
-                display.drawPixel(peakX, peakY, SSD1306_WHITE);
+        // Outer Continuous Organic Wave Perimeter Line
+        if (i == 0) {
+            firstWX = x2;
+            firstWY = y2;
+        } else {
+            if (prevWX >= 0 && prevWX < SCREEN_WIDTH && prevWY >= 16 && prevWY < SCREEN_HEIGHT &&
+                x2 >= 0 && x2 < SCREEN_WIDTH && y2 >= 16 && y2 < SCREEN_HEIGHT) {
+                display.drawLine(prevWX, prevWY, x2, y2, SSD1306_WHITE);
             }
         }
+        prevWX = x2;
+        prevWY = y2;
+
+        // Floating Outer Sparks / Particle Cloud
+        if (val > 4) {
+            int sparkR = baseRadius + spikeLen + 3 + (val % 3);
+            int sparkX = cx + (int)(cosA * sparkR);
+            int sparkY = cy + (int)(sinA * sparkR);
+            if (sparkX >= 0 && sparkX < SCREEN_WIDTH && sparkY >= 16 && sparkY < SCREEN_HEIGHT) {
+                display.drawPixel(sparkX, sparkY, SSD1306_WHITE);
+            }
+        }
+    }
+
+    // Connect final point back to first point to close outer wave loop
+    if (prevWX >= 0 && prevWX < SCREEN_WIDTH && prevWY >= 16 && prevWY < SCREEN_HEIGHT &&
+        firstWX >= 0 && firstWX < SCREEN_WIDTH && firstWY >= 16 && firstWY < SCREEN_HEIGHT) {
+        display.drawLine(prevWX, prevWY, firstWX, firstWY, SSD1306_WHITE);
     }
 }
 
