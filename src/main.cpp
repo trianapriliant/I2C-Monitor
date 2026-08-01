@@ -1008,6 +1008,98 @@ void drawOrbitSimulation() {
     else display.fillRect(108, 29, 9, 18, SSD1306_WHITE); // Half/Crescent
 }
 
+void drawNcsCircleVisualizer() {
+    // 1. Top Yellow Strip (Y=0..15): Song Title & Artist Marquee Header
+    String info = customScreen.line2;
+    if (customScreen.line3.length() > 0 && customScreen.line3 != info) {
+        info += " - " + customScreen.line3;
+    }
+    drawMarqueeLine(0, 0, "NCS ", info);
+    display.drawFastHLine(0, 14, SCREEN_WIDTH, SSD1306_WHITE);
+
+    // 2. Parse FFT Data
+    int realVals[20] = {0};
+    bool hasRealData = (customScreen.eqBars.indexOf(',') >= 0);
+
+    if (hasRealData) {
+        int idx = 0, lastPos = 0;
+        String str = customScreen.eqBars;
+        for (int i = 0; i <= (int)str.length() && idx < 20; i++) {
+            if (i == (int)str.length() || str.charAt(i) == ',') {
+                realVals[idx] = str.substring(lastPos, i).toInt();
+                idx++;
+                lastPos = i + 1;
+            }
+        }
+    }
+
+    int bassEnergy = 0;
+    if (hasRealData) {
+        bassEnergy = (realVals[0] + realVals[1] + realVals[2] + realVals[3]) / 4;
+    } else if (customScreen.eqBars == "1") {
+        bassEnergy = ((millis() / 200) % 2 == 0) ? 7 : 2;
+    }
+
+    // Center of Circle
+    int cx = 64;
+    int cy = 39;
+    unsigned long ms = millis();
+
+    // Bass-driven pulsing radius (base radius expands from 11px up to 16px)
+    int baseRadius = 11 + (bassEnergy * 5 / 10);
+
+    // Inner Pulsing Ring Core (NCS Sphere style)
+    display.drawCircle(cx, cy, baseRadius, SSD1306_WHITE);
+    display.drawCircle(cx, cy, max(2, baseRadius - 3), SSD1306_WHITE);
+    display.fillCircle(cx, cy, max(1, baseRadius - 6), SSD1306_WHITE);
+
+    // 24 Radial Spectrum Rays radiating outwards around 360 degrees
+    int numRays = 24;
+    float angleStep = (2.0f * M_PI) / numRays;
+    // Slow rotational offset to give dynamic spinning NCS sphere vibe
+    float rotOffset = (ms % 10000) * (2.0f * M_PI / 10000.0f);
+
+    for (int i = 0; i < numRays; i++) {
+        float angle = i * angleStep + rotOffset;
+        float cosA = cos(angle);
+        float sinA = sin(angle);
+
+        // Map ray index to 20 FFT bands
+        int bandIdx = i % 20;
+        int val = 0;
+        if (hasRealData) {
+            val = realVals[bandIdx];
+        } else if (bassEnergy > 0) {
+            int t = (int)(ms / 40);
+            val = (fastSin(t * 7 + i * 45) * 4 / 255) + 3;
+        }
+
+        // Ray length extending outwards
+        int spikeLen = val * 12 / 10; // 0 to 12 pixels length
+        if (spikeLen < 1) spikeLen = 1;
+
+        int x1 = cx + (int)(cosA * baseRadius);
+        int y1 = cy + (int)(sinA * baseRadius);
+        int x2 = cx + (int)(cosA * (baseRadius + spikeLen));
+        int y2 = cy + (int)(sinA * (baseRadius + spikeLen));
+
+        // Draw radial spectrum ray line
+        if (x1 >= 0 && x1 < SCREEN_WIDTH && y1 >= 16 && y1 < SCREEN_HEIGHT &&
+            x2 >= 0 && x2 < SCREEN_WIDTH && y2 >= 16 && y2 < SCREEN_HEIGHT) {
+            display.drawLine(x1, y1, x2, y2, SSD1306_WHITE);
+        }
+
+        // Floating peak particle dot at tip
+        if (val > 4) {
+            int peakX = cx + (int)(cosA * (baseRadius + spikeLen + 3));
+            int peakY = cy + (int)(sinA * (baseRadius + spikeLen + 3));
+            if (peakX >= 0 && peakX < SCREEN_WIDTH && peakY >= 16 && peakY < SCREEN_HEIGHT) {
+                display.drawPixel(peakX, peakY, SSD1306_WHITE);
+            }
+        }
+    }
+}
+
 void pageCustomScreen() {
     if (customScreen.hdrTitle.startsWith("STAGE")) {
         drawStageKaraoke();
@@ -1020,7 +1112,11 @@ void pageCustomScreen() {
     }
 
     if (customScreen.hdrTitle.startsWith("SPECTRUM")) {
-        drawSpectrumEqualizer();
+        if (customScreen.subPage == 1) {
+            drawNcsCircleVisualizer();
+        } else {
+            drawSpectrumEqualizer();
+        }
         return;
     }
 
