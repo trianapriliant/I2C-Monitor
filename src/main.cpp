@@ -1215,6 +1215,102 @@ void drawNcsCircleVisualizer() {
     }
 }
 
+void drawCenterMirrorWaveformVisualizer() {
+    // 1. Top Yellow Strip (Y=0..15): Song Title & Artist Marquee Header
+    String info = customScreen.line2;
+    if (customScreen.line3.length() > 0 && customScreen.line3 != info) {
+        info += " - " + customScreen.line3;
+    }
+    drawMarqueeLine(0, 0, "WAVE ", info);
+    display.drawFastHLine(0, 14, SCREEN_WIDTH, SSD1306_WHITE);
+
+    // 2. Parse 20 FFT Bands
+    int realVals[20] = {0};
+    bool hasRealData = (customScreen.eqBars.indexOf(',') >= 0);
+
+    if (hasRealData) {
+        int idx = 0, lastPos = 0;
+        String str = customScreen.eqBars;
+        for (int i = 0; i <= (int)str.length() && idx < 20; i++) {
+            if (i == (int)str.length() || str.charAt(i) == ',') {
+                realVals[idx] = str.substring(lastPos, i).toInt();
+                idx++;
+                lastPos = i + 1;
+            }
+        }
+    }
+
+    int bassEnergy = 0;
+    if (hasRealData) {
+        bassEnergy = (realVals[0] + realVals[1] + realVals[2] + realVals[3]) / 4;
+    } else if (customScreen.eqBars == "1") {
+        bassEnergy = ((millis() / 200) % 2 == 0) ? 7 : 2;
+    }
+
+    unsigned long ms = millis();
+    int cy = 39; // Center Baseline Axis
+
+    // Draw horizontal center baseline axis line
+    display.drawFastHLine(0, cy, SCREEN_WIDTH, SSD1306_WHITE);
+
+    // 32 Symmetrical Center-Mirror Spectrum Bars (3px width, 1px gap -> 32 * 4 = 128px)
+    static int wavePeaks[32] = {0};
+    static unsigned long lastWaveDecay = 0;
+
+    for (int i = 0; i < 32; i++) {
+        // Map 32 bars to 20 FFT bands smoothly
+        int bandIdx = (i * 20) / 32;
+        int val = 0;
+        if (hasRealData) {
+            val = realVals[bandIdx];
+        } else if (bassEnergy > 0) {
+            int t = (int)(ms / 40);
+            val = (fastSin(t * 8 + i * 35) * 6 / 255) + 3;
+        }
+
+        // Half-height of vertical bar expanding upward and downward from center
+        int halfH = val * 19 / 10; // Max 19px up and 19px down (Total height 38px)
+        if (halfH < 1) halfH = 1;
+
+        // Peak tracking for floating mirror dots
+        if (halfH > wavePeaks[i]) {
+            wavePeaks[i] = halfH;
+        }
+
+        int x = i * 4;
+        int barW = 3;
+        int topY = cy - halfH;
+
+        // Draw symmetrical vertical bar around center
+        display.fillRect(x, topY, barW, (halfH * 2) + 1, SSD1306_WHITE);
+
+        // Draw floating mirror peak dots (Top & Bottom)
+        if (wavePeaks[i] > 2) {
+            int peakTopY = cy - wavePeaks[i] - 2;
+            int peakBotY = cy + wavePeaks[i] + 2;
+
+            if (peakTopY >= 16) display.drawFastHLine(x, peakTopY, barW, SSD1306_WHITE);
+            if (peakBotY < 64)  display.drawFastHLine(x, peakBotY, barW, SSD1306_WHITE);
+        }
+    }
+
+    // Decay peak hold every ~100ms
+    if (ms - lastWaveDecay > 100) {
+        lastWaveDecay = ms;
+        for (int i = 0; i < 32; i++) {
+            if (wavePeaks[i] > 0) wavePeaks[i]--;
+        }
+    }
+
+    // Dynamic Bass Pulse Overlay in Center Line (Hype Energy Waveform)
+    if (bassEnergy >= 5) {
+        int pulseR = 4 + (bassEnergy * 3 / 10);
+        display.fillCircle(64, cy, pulseR, SSD1306_BLACK);
+        display.drawCircle(64, cy, pulseR, SSD1306_WHITE);
+        display.fillCircle(64, cy, max(1, pulseR - 3), SSD1306_WHITE);
+    }
+}
+
 void pageCustomScreen() {
     if (customScreen.hdrTitle.startsWith("STAGE")) {
         drawStageKaraoke();
@@ -1227,7 +1323,9 @@ void pageCustomScreen() {
     }
 
     if (customScreen.hdrTitle.startsWith("SPECTRUM")) {
-        if (customScreen.subPage == 1) {
+        if (customScreen.subPage == 2) {
+            drawCenterMirrorWaveformVisualizer();
+        } else if (customScreen.subPage == 1) {
             drawNcsCircleVisualizer();
         } else {
             drawSpectrumEqualizer();
