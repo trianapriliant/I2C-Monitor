@@ -1152,6 +1152,67 @@ void drawNcsCircleVisualizer() {
         firstWX >= 0 && firstWX < SCREEN_WIDTH && firstWY >= 16 && firstWY < SCREEN_HEIGHT) {
         display.drawLine(prevWX, prevWY, firstWX, firstWY, SSD1306_WHITE);
     }
+
+    // -------------------------------------------------------------------
+    // Layer C: Left & Right Side Hype Mini Equalizer Bars
+    // -------------------------------------------------------------------
+    // Left Side 5 Mini Frequency Equalizer Bars (X=2..18)
+    int leftBands[5] = {realVals[0], realVals[1], realVals[2], realVals[3], realVals[4]};
+    if (!hasRealData && bassEnergy > 0) {
+        for (int b = 0; b < 5; b++) leftBands[b] = (fastSin((int)(ms / 30) * 8 + b * 50) * 4 / 255) + 3;
+    }
+
+    for (int b = 0; b < 5; b++) {
+        int barX = 2 + b * 4;
+        int barVal = leftBands[b];
+        int barH = barVal * 28 / 10; // Max 28px height
+        if (barH > 0) {
+            display.fillRect(barX, 62 - barH, 3, barH, SSD1306_WHITE);
+            if (barVal > 3) {
+                display.drawPixel(barX + 1, 62 - barH - 2, SSD1306_WHITE);
+            }
+        }
+    }
+
+    // Right Side 5 Mini Frequency Equalizer Bars (X=106..122)
+    int rightBands[5] = {realVals[15], realVals[16], realVals[17], realVals[18], realVals[19]};
+    if (!hasRealData && bassEnergy > 0) {
+        for (int b = 0; b < 5; b++) rightBands[b] = (fastSin((int)(ms / 30) * 8 + (b + 5) * 50) * 4 / 255) + 3;
+    }
+
+    for (int b = 0; b < 5; b++) {
+        int barX = 106 + b * 4;
+        int barVal = rightBands[b];
+        int barH = barVal * 28 / 10; // Max 28px height
+        if (barH > 0) {
+            display.fillRect(barX, 62 - barH, 3, barH, SSD1306_WHITE);
+            if (barVal > 3) {
+                display.drawPixel(barX + 1, 62 - barH - 2, SSD1306_WHITE);
+            }
+        }
+    }
+
+    // -------------------------------------------------------------------
+    // Layer D: Dynamic HYPE Bass Energy Shockwaves & Corner Lightning Flash Rays
+    // -------------------------------------------------------------------
+    if (bassEnergy >= 4) {
+        // High Bass / Hype Condition Trigger!
+        int waveR = 8 + ((ms / 40) % 24); // Expanding shockwave arc radius (8..31px)
+
+        // Left & Right Speaker Shockwave Arcs
+        display.drawCircle(0, 39, waveR, SSD1306_WHITE);
+        if (waveR > 6) display.drawCircle(0, 39, waveR - 6, SSD1306_WHITE);
+
+        display.drawCircle(127, 39, waveR, SSD1306_WHITE);
+        if (waveR > 6) display.drawCircle(127, 39, waveR - 6, SSD1306_WHITE);
+
+        // Extreme Hype Drop: Flash top-left and top-right energetic corner bolts
+        if (bassEnergy >= 6) {
+            int boltLen = (bassEnergy * 2);
+            display.drawLine(0, 16, boltLen, 16 + boltLen, SSD1306_WHITE);
+            display.drawLine(127, 16, 127 - boltLen, 16 + boltLen, SSD1306_WHITE);
+        }
+    }
 }
 
 void pageCustomScreen() {
