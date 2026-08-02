@@ -1521,6 +1521,7 @@ void applyField(const String &key, const String &value) {
     if (fieldsInBlock == 0) {
         incomingCustomScreen = CustomScreen();
         incomingCustomScreen.subPage = customScreen.subPage;
+        incomingCustomScreen.maxSubPages = (customScreen.maxSubPages > 1) ? customScreen.maxSubPages : 1;
         incomingCustomScreen.active = customScreen.active;
     }
 
@@ -1539,6 +1540,9 @@ void applyField(const String &key, const String &value) {
         } else {
             incomingCustomScreen.hdrTitle = value;
             incomingCustomScreen.hdrSub = "";
+        }
+        if (incomingCustomScreen.hdrTitle.startsWith("SPECTRUM")) {
+            if (incomingCustomScreen.maxSubPages < 3) incomingCustomScreen.maxSubPages = 3;
         }
     } else if (key == "L1") {
         incomingCustomScreen.line1 = value;
@@ -1675,7 +1679,10 @@ void handleLine(String line) {
     if (line == "END") {
         if (fieldsInBlock > 0) {
             dataReceived = true;
-            if (incomingCustomScreen.subPage >= incomingCustomScreen.maxSubPages) {
+            if (incomingCustomScreen.hdrTitle.startsWith("SPECTRUM")) {
+                if (incomingCustomScreen.maxSubPages < 3) incomingCustomScreen.maxSubPages = 3;
+            }
+            if (incomingCustomScreen.maxSubPages > 0 && incomingCustomScreen.subPage >= incomingCustomScreen.maxSubPages) {
                 incomingCustomScreen.subPage = 0;
             }
             customScreen = incomingCustomScreen;
