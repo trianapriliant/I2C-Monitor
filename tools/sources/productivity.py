@@ -144,7 +144,7 @@ class ScheduleManager:
             h, m, name, _ = self.schedule[item_idx]
             time_str = f"{h:02d}:{m:02d}"
             prefix = ">" if i == 0 else " "
-            items.append(f"{prefix} {time_str} {name}")
+            items.append(f"{prefix} {time_str} |{name}")
         return items
 
     def day_progress(self, dt):
@@ -263,7 +263,7 @@ class AnimationManager:
             self.last_preview_time = now
             self.mode = MODE_PREVIEW
             self.mode_start = now
-            self.mode_duration = 6.0  # Tampilkan preview selama 6 detik
+            self.mode_duration = 30.0  # Tampilkan preview selama 30 detik
             return self.mode
 
         self.last_activity = current_act

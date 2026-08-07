@@ -1436,11 +1436,20 @@ void drawProductivityDashboard() {
         }
         display.drawFastHLine(0, YELLOW_ROWS, SCREEN_WIDTH, SSD1306_WHITE);
 
-        // Display 4 upcoming schedule items
-        drawMarqueeLine(2, 17, "", customScreen.line1, 21);
-        drawMarqueeLine(2, 28, "", customScreen.line2, 21);
-        drawMarqueeLine(2, 39, "", customScreen.line3, 21);
-        drawMarqueeLine(2, 50, "", customScreen.line4, 21);
+        // Display 4 upcoming schedule items (fixed prefix/time on left, marquee activity text)
+        String lines[4] = {customScreen.line1, customScreen.line2, customScreen.line3, customScreen.line4};
+        int ys[4] = {17, 28, 39, 50};
+        for (int i = 0; i < 4; i++) {
+            String item = lines[i];
+            int p = item.indexOf('|');
+            if (p >= 0) {
+                String prefix = item.substring(0, p);
+                String actName = item.substring(p + 1);
+                drawMarqueeLine(2, ys[i], prefix, actName, 21);
+            } else {
+                drawMarqueeLine(2, ys[i], "", item, 21);
+            }
+        }
 
         // Progress bar at bottom
         drawBar(2, 58, SCREEN_WIDTH - 4, 5, progress);
