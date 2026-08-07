@@ -192,10 +192,8 @@ class QuotesManager:
         return q
 
 
-# ============================================================
-#  PomodoroManager — Siklus Pomodoro Otomatis (25m Focus / 5m Break)
-# ============================================================
-WORK_ACTIVITIES = ["Deep Work", "Desain Template", "Desain Lanjutan", "Development", "Tidur"]  # 'Tidur' included so user can test live right now!
+# List aktivitas yang memicu Pomodoro otomatis
+WORK_ACTIVITIES = ["Deep Work", "Desain Template", "Desain Lanjutan", "Development"]
 
 
 class PomodoroManager:
