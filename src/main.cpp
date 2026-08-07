@@ -1311,7 +1311,163 @@ void drawCenterMirrorWaveformVisualizer() {
     }
 }
 
+// ============================================================
+//  Module #25: Daily Productivity Dashboard Renderer
+// ============================================================
+void drawProductivityDashboard() {
+    unsigned long ms = millis();
+    String mode = customScreen.line5;    // normal / morning / evening / transition
+    String clock = customScreen.bigText; // HH:MM
+    String currAct = customScreen.line1; // Current activity name
+    String nextAct = customScreen.line2; // Next activity name
+    String countdown = customScreen.line3; // Countdown string (e.g. "48m")
+    String quote = customScreen.line4;   // Quote text (empty in normal)
+    int progress = customScreen.bar1;    // Day progress 0-100
+
+    // ── Morning Greeting Mode ──────────────────────────────────
+    if (mode == "morning") {
+        // Animated sunrise header
+        int wipeY = 7 + ((ms / 80) % 3); // subtle bounce
+        display.setTextSize(1);
+        printCentered("GOOD MORNING!", wipeY, 1);
+        display.drawFastHLine(0, 16, SCREEN_WIDTH, SSD1306_WHITE);
+
+        // Sun icon (animated rising circle)
+        int sunY = 38 - ((ms / 200) % 8); // slowly rises
+        int sunR = 6 + ((ms / 300) % 3);
+        display.fillCircle(64, sunY, sunR, SSD1306_WHITE);
+        // Sun rays
+        for (int r = 0; r < 8; r++) {
+            float angle = r * (M_PI / 4.0f) + (ms % 4000) * (2.0f * M_PI / 4000.0f);
+            int x1 = 64 + (int)(cos(angle) * (sunR + 3));
+            int y1 = sunY + (int)(sin(angle) * (sunR + 3));
+            int x2 = 64 + (int)(cos(angle) * (sunR + 7));
+            int y2 = sunY + (int)(sin(angle) * (sunR + 7));
+            display.drawLine(x1, y1, x2, y2, SSD1306_WHITE);
+        }
+
+        // Motivational text
+        printCentered("Today is a new", 50, 1);
+        printCentered("opportunity.", 59, 1);
+        return;
+    }
+
+    // ── Evening Review Mode ────────────────────────────────────
+    if (mode == "evening") {
+        display.setTextSize(1);
+        printCentered("REVIEW TODAY", 3, 1);
+        display.drawFastHLine(0, 14, SCREEN_WIDTH, SSD1306_WHITE);
+
+        // Parse review categories from eqBars or line4
+        // Categories sent as "cat1|cat2|cat3|..." in p2_l5
+        String reviewData = customScreen.p2Line5;
+        int y = 18;
+        int lastPos = 0;
+        int itemIdx = 0;
+        for (int i = 0; i <= (int)reviewData.length() && itemIdx < 6; i++) {
+            if (i == (int)reviewData.length() || reviewData.charAt(i) == '|') {
+                String cat = reviewData.substring(lastPos, i);
+                lastPos = i + 1;
+                if (cat.length() > 0) {
+                    // Animated checkmark appearance
+                    int charDelay = itemIdx * 400;
+                    String prefix = (ms > (unsigned long)charDelay) ? "* " : "  ";
+                    display.setCursor(8, y);
+                    display.print(prefix);
+                    display.print(cat);
+                    y += 8;
+                    itemIdx++;
+                }
+            }
+        }
+
+        // Countdown to sleep
+        display.drawFastHLine(0, 56, SCREEN_WIDTH, SSD1306_WHITE);
+        String sleepMsg = "Tidur " + countdown;
+        printCentered(sleepMsg.c_str(), 58, 1);
+        return;
+    }
+
+    // ── Transition Mode (Quote Animation) ──────────────────────
+    if (mode == "transition") {
+        // Header stays
+        drawHeader(customScreen.hdrTitle.c_str(), "", customScreen.hdrSub);
+
+        // Animated sliding line
+        int slideX = ((ms / 15) % (SCREEN_WIDTH * 2));
+        if (slideX > SCREEN_WIDTH) slideX = SCREEN_WIDTH * 2 - slideX;
+        display.drawFastHLine(0, 36, slideX, SSD1306_WHITE);
+        display.drawFastHLine(SCREEN_WIDTH - slideX, 38, slideX, SSD1306_WHITE);
+
+        // Quote in big text (centered)
+        if (quote.length() > 0) {
+            if (quote.length() <= 11) {
+                printCentered(quote.c_str(), 22, 2);
+            } else {
+                // Split into two lines for long quotes
+                printCentered(quote.c_str(), 22, 1);
+            }
+        }
+
+        // Next activity preview at bottom
+        String nextPreview = "> " + currAct;
+        printCentered(nextPreview.c_str(), 46, 1);
+
+        // Decorative corner dots
+        display.drawPixel(2, 20, SSD1306_WHITE);
+        display.drawPixel(125, 20, SSD1306_WHITE);
+        display.drawPixel(2, 56, SSD1306_WHITE);
+        display.drawPixel(125, 56, SSD1306_WHITE);
+        return;
+    }
+
+    // ── Normal Dashboard Mode ──────────────────────────────────
+    // Yellow header band (Y0-15)
+    String hdrLeft = customScreen.hdrTitle;
+    hdrLeft.trim();
+    // Extract day+date from p2_hdr (e.g. "Kamis | 7 Agustus")
+    String dayDate = customScreen.p2HdrTitle;
+    if (dayDate.length() == 0) dayDate = "Dashboard";
+    dayDate.trim();
+
+    display.setTextSize(1);
+    display.setCursor(0, 0);
+    display.print("SCHEDULE");
+    // Progress % on the right of header
+    String pctStr = String(progress) + "%";
+    printRight(pctStr, 0);
+    // Date on second line of yellow band
+    drawMarqueeLine(0, 8, "", dayDate, 21);
+    display.drawFastHLine(0, YELLOW_ROWS, SCREEN_WIDTH, SSD1306_WHITE);
+
+    // Big Clock (Y18-33, textSize 2 = 16px tall)
+    printCentered(clock.c_str(), 18, 2);
+
+    // Thin separator
+    display.drawFastHLine(16, 35, SCREEN_WIDTH - 32, SSD1306_WHITE);
+
+    // Current Activity (Y37-45)
+    display.setCursor(2, 37);
+    display.print("> ");
+    display.print(currAct);
+
+    // Next Activity + Countdown (Y46-54)
+    display.setCursor(2, 46);
+    display.print("> ");
+    display.print(nextAct);
+    // Countdown right-aligned
+    printRight(countdown, 46);
+
+    // Progress Bar (Y56-62)
+    drawBar(2, 56, SCREEN_WIDTH - 4, 7, progress);
+}
+
 void pageCustomScreen() {
+    if (customScreen.hdrTitle.startsWith("SCHEDULE")) {
+        drawProductivityDashboard();
+        return;
+    }
+
     if (customScreen.hdrTitle.startsWith("STAGE")) {
         drawStageKaraoke();
         return;
@@ -1869,6 +2025,7 @@ void showSplashScreen() {
 //  Setup & Loop
 // ============================================
 void setup() {
+    Serial.setRxBufferSize(2048);
     Serial.begin(SERIAL_BAUD);
     // Default readStringUntil() menunggu 1 detik kalau baris belum lengkap;
     // itu bikin tombol terasa lag. 100 ms sudah cukup di 115200 baud.
@@ -1914,7 +2071,7 @@ void setup() {
 void loop() {
     handleButtons();
 
-    if (Serial.available() > 0) {
+    while (Serial.available() > 0) {
         handleLine(Serial.readStringUntil('\n'));
     }
 

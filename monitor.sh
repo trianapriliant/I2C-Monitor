@@ -92,7 +92,7 @@ start_source() {
     local interval=3
     if [ "$src" = "visualizer" ] || [ "$src" = "stage" ] || [ "$src" = "video" ] || [ "$src" = "arcade" ] || [ "$src" = "matrix" ] || [ "$src" = "eyes" ] || [ "$src" = "orbit" ]; then
         interval=0.04  # ~25fps untuk real-time visualizer, game, eyes & 3D orbit (low-latency)
-    elif [ "$src" = "spotify" ] || [ "$src" = "pomodoro" ] || [ "$src" = "companion" ] || [ "$src" = "network" ] || [ "$src" = "news" ]; then
+    elif [ "$src" = "spotify" ] || [ "$src" = "pomodoro" ] || [ "$src" = "companion" ] || [ "$src" = "network" ] || [ "$src" = "news" ] || [ "$src" = "productivity" ]; then
         interval=0.5
     fi
     nohup python3 -u tools/token_monitor.py --source "$src" --interval "$interval" \
@@ -136,6 +136,7 @@ interactive_menu() {
     echo "22) Matrix Digital Rain & Cyberpunk HUD"
     echo "23) Cute Expressive Robo Eyes Animation"
     echo "24) Solar System & Moon Phase Orbit 3D"
+    echo "25) Daily Productivity Dashboard"
     echo "99) Rotasi Otomatis (Semua Mode)"
     echo " 0) Stop Monitor"
     echo "========================================"
@@ -166,6 +167,7 @@ interactive_menu() {
         22) start_source "matrix" ;;
         23) start_source "eyes" ;;
         24) start_source "orbit" ;;
+        25) start_source "productivity" ;;
         99)
             stop_monitor >/dev/null
             nohup python3 -u tools/token_monitor.py --rotate 10 --interval 3 > "$LOG" 2>&1 &

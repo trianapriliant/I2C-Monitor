@@ -181,8 +181,12 @@ class Source(TokenSource):
         super().__init__(scope=scope, project=project)
         self.audio_thread = None
         self.has_real_audio = False
-        self.cached_media = None
-        self.last_media_fetch = 0
+        self.cached_media = {"title": "No Track", "artist": "Spotify Idle", "pos": 0.0, "dur": 100.0, "playing": False}
+        self.running = True
+
+        # Start background thread for AppleScript polling
+        self.media_thread = threading.Thread(target=self._poll_media, daemon=True)
+        self.media_thread.start()
 
         # Start audio capture if BlackHole available
         if HAS_AUDIO:
@@ -199,6 +203,22 @@ class Source(TokenSource):
         if not self.has_real_audio:
             print("[INFO] BlackHole tidak ditemukan — fallback ke animasi prosedural di ESP32")
 
+    def _poll_media(self):
+        """Loop berjalan di background thread supaya osascript tidak memblokir snapshot()"""
+        while self.running:
+            try:
+                self.cached_media = get_media_info()
+            except Exception:
+                pass
+            
+            # Update posisi pseudo saat tidak memanggil AppleScript
+            for _ in range(20):
+                if not self.running:
+                    break
+                time.sleep(0.1)
+                if self.cached_media.get("playing", False):
+                    self.cached_media["pos"] += 0.1
+
     def available(self):
         return True
 
@@ -206,13 +226,6 @@ class Source(TokenSource):
         return {"input": 0, "output": 0, "cache_read": 0, "cache_write": 0, "cost": 0.0, "requests": 0}
 
     def snapshot(self):
-        now = time.time()
-
-        # Cache media info (AppleScript lambat, jangan panggil terlalu sering)
-        if not self.cached_media or (now - self.last_media_fetch) > 2.0:
-            self.cached_media = get_media_info()
-            self.last_media_fetch = now
-
         m = self.cached_media
 
         pos_m, pos_s = divmod(int(m["pos"]), 60)

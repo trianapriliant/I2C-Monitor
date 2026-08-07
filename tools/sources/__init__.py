@@ -32,6 +32,7 @@ from sources import (
     matrix,
     eyes,
     orbit,
+    productivity,
 )
 
 _REGISTRY = {
@@ -59,6 +60,7 @@ _REGISTRY = {
     matrix.NAME: matrix.Source,
     eyes.NAME: eyes.Source,
     orbit.NAME: orbit.Source,
+    productivity.NAME: productivity.Source,
 }
 
 

@@ -42,6 +42,7 @@ tools/
     matrix.py              Matrix Digital Rain ASCII Animation & Cyberpunk HUD Terminal
     eyes.py                Cute Expressive Robo Eyes (Animasi Mata Lucu: Kedip, Lirik, Happy, Sleepy, Wink)
     orbit.py               Solar System 3D Orbit Simulation & Moon Phase Tracker
+    productivity.py        Daily Productivity Dashboard (Jadwal Harian, Jam Besar, Progress, Quote Motivasi)
 ```
 
 Pemisahannya: **source** di folder `tools/sources/` mengatur pengambilan data di komputer, dan **firmware** `src/main.cpp` menangani rendering grafik OLED di ESP32.
