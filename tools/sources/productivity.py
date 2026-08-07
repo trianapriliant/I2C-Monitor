@@ -62,22 +62,26 @@ class TimeManager:
 # ============================================================
 # Format: (jam, menit, nama_aktivitas, ikon_1char)
 SCHEDULE = [
-    (6,  30, "Morning Routine",     "~"),
-    (7,   0, "Sarapan + Kopi",      "*"),
-    (7,  30, "Deep Work",           "#"),
-    (10, 30, "Istirahat",           "."),
-    (10, 45, "Desain Template",     "#"),
-    (12,  0, "Makan Siang",         "*"),
-    (13,  0, "Desain Lanjutan",     "#"),
-    (15,  0, "Konten Sosmed",       "@"),
-    (15, 30, "Olahraga",            "!"),
-    (16, 30, "Makan Buah",          "*"),
-    (17,  0, "Development",         "#"),
-    (19,  0, "Makan Malam",         "*"),
-    (20,  0, "Cek Sosmed",          "@"),
-    (20, 30, "Hiburan",             "."),
-    (22,  0, "Persiapan Tidur",     "."),
-    (22, 30, "Tidur",               "z"),
+    (4,  30, "Bangun & Solat Subuh", "^"),
+    (6,  30, "Morning Routine",      "~"),
+    (7,   0, "Sarapan + Kopi",       "*"),
+    (7,  30, "Deep Work",            "#"),
+    (10, 30, "Istirahat",            "."),
+    (10, 45, "Desain Template",      "#"),
+    (12,  0, "Solat Dzuhur + Makan", "*"),
+    (13,  0, "Desain Lanjutan",      "#"),
+    (15, 15, "Solat Ashar",          "^"),
+    (15, 30, "Konten Sosmed",        "@"),
+    (16,  0, "Olahraga",             "!"),
+    (16, 30, "Makan Buah",           "*"),
+    (17,  0, "Development",          "#"),
+    (18,  0, "Solat Maghrib",        "^"),
+    (18, 30, "Makan Malam",          "*"),
+    (19, 15, "Solat Isya",           "^"),
+    (20,  0, "Cek Sosmed",           "@"),
+    (20, 30, "Hiburan",              "."),
+    (22,  0, "Persiapan Tidur",      "."),
+    (22, 30, "Tidur",                "z"),
 ]
 
 # Kategori untuk evening review
@@ -148,10 +152,10 @@ class ScheduleManager:
         return items
 
     def day_progress(self, dt):
-        """Hitung persentase hari (06:30=0% → 22:30=100%)."""
+        """Hitung persentase hari (04:30=0% → 22:30=100%)."""
         now_min = TimeManager.minutes_since_midnight(dt)
-        start = 6 * 60 + 30   # 06:30
-        end = 22 * 60 + 30     # 22:30
+        start = 4 * 60 + 30   # 04:30 (Bangun & Subuh)
+        end = 22 * 60 + 30     # 22:30 (Tidur)
         if now_min <= start:
             return 0
         if now_min >= end:
@@ -296,8 +300,8 @@ class AnimationManager:
             else:
                 return self.mode
 
-        # Deteksi morning greeting (06:30 - 06:35, sekali per hari)
-        if 390 <= now_min <= 395 and self._morning_shown_date != date_key:
+        # Deteksi morning greeting (04:30 - 04:35, sekali per hari)
+        if 270 <= now_min <= 275 and self._morning_shown_date != date_key:
             self._morning_shown_date = date_key
             self.mode = MODE_MORNING
             self.mode_start = now
