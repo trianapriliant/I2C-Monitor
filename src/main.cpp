@@ -1462,21 +1462,36 @@ void drawProductivityDashboard() {
 
     // ── Normal Dashboard Mode ──────────────────────────────────
     // Yellow header band (Y0-15)
-    // Extract day+date from p2_hdr (e.g. "Kamis | 7 Agustus")
+    // Extract date, day, year from p2_hdr (e.g. "8 Agustus | Jumat | 2026")
     String dayDate = customScreen.p2HdrTitle;
     if (dayDate.length() == 0) dayDate = "Dashboard";
     dayDate.trim();
 
+    String p2Sub = customScreen.p2HdrSub;
+    String dayName = p2Sub;
+    String yearStr = "";
+    int pipeIdx = p2Sub.indexOf('|');
+    if (pipeIdx >= 0) {
+        dayName = p2Sub.substring(0, pipeIdx);
+        yearStr = p2Sub.substring(pipeIdx + 1);
+    }
+    dayName.trim();
+    yearStr.trim();
+
     display.setTextSize(1);
     display.setCursor(0, 0);
     display.print("SCHEDULE");
-    // Date on the right of header line 1
+    // Date on the right of header line 1 (Y=0)
     printRight(dayDate, 0);
-    // Day name on second line of yellow band (e.g. "Kamis, 8 Agustus")
-    String dayName = customScreen.p2HdrSub;
-    dayName.trim();
+
+    // Year on the right of header line 2 (Y=8)
+    if (yearStr.length() > 0) {
+        printRight(yearStr, 8);
+    }
+    // Day name on left of header line 2 (Y=8)
     if (dayName.length() > 0) {
-        drawMarqueeLine(0, 8, "", dayName, 21);
+        int maxChar = (yearStr.length() > 0) ? (21 - yearStr.length() - 1) : 21;
+        drawMarqueeLine(0, 8, "", dayName, maxChar);
     }
     display.drawFastHLine(0, YELLOW_ROWS, SCREEN_WIDTH, SSD1306_WHITE);
 

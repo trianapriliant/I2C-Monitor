@@ -320,6 +320,8 @@ class Source(TokenSource):
         if mode == MODE_EVENING:
             review_str = "|".join(REVIEW_CATEGORIES)
 
+        year = str(dt.year)
+
         return {
             "source": self.DISPLAY_NAME,
             "custom": {
@@ -332,7 +334,7 @@ class Source(TokenSource):
                 "l5": mode,
                 "bar1": progress,
                 # Page 2: Detail jadwal berikutnya
-                "p2_hdr": f"{date} | {day}",
+                "p2_hdr": f"{date} | {day} | {year}",
                 "p2_l1": f"NOW: {curr_icon} {curr_name}",
                 "p2_l2": f"NEXT: {next_name} ({next_start_time})",
                 "p2_l3": f"Mulai: {next_start_time}",
