@@ -1460,6 +1460,63 @@ void drawProductivityDashboard() {
         return;
     }
 
+    // ── Pomodoro Deep Work Mode ─────────────────────────────────
+    if (mode == "pomodoro") {
+        String dayDate = customScreen.p2HdrTitle;
+        if (dayDate.length() == 0) dayDate = "Dashboard";
+        dayDate.trim();
+
+        String p2Sub = customScreen.p2HdrSub;
+        String dayName = p2Sub;
+        String yearStr = "";
+        int pipeIdx = p2Sub.indexOf('|');
+        if (pipeIdx >= 0) {
+            dayName = p2Sub.substring(0, pipeIdx);
+            yearStr = p2Sub.substring(pipeIdx + 1);
+        }
+        dayName.trim();
+        yearStr.trim();
+
+        display.setTextSize(1);
+        display.setCursor(0, 0);
+        display.print("POMODORO");
+        printRight(dayDate, 0);
+
+        if (yearStr.length() > 0) printRight(yearStr, 8);
+        if (dayName.length() > 0) {
+            int maxChar = (yearStr.length() > 0) ? (21 - yearStr.length() - 1) : 21;
+            drawMarqueeLine(0, 8, "", dayName, maxChar);
+        }
+        display.drawFastHLine(0, YELLOW_ROWS, SCREEN_WIDTH, SSD1306_WHITE);
+
+        // Big Pomodoro Timer Countdown (Y18-33, textSize 2 = 16px tall)
+        printCentered(clock.c_str(), 18, 2);
+
+        // Thin separator
+        display.drawFastHLine(16, 35, SCREEN_WIDTH - 32, SSD1306_WHITE);
+
+        // Current Activity + Phase Label (Y37-45)
+        bool blinkOn = ((ms / 500) % 2 == 0);
+        String prefixCurr = blinkOn ? "> " : "  ";
+        drawMarqueeLine(2, 37, prefixCurr, currAct, 20);
+
+        // Real Clock info + Next Activity Start Time (Y46-54)
+        String realClockInfo = quote.length() > 0 ? ("Jam " + quote) : "";
+        int cdChars = countdown.length();
+        int maxNextChars = 21 - 2 - cdChars - 1;
+        if (maxNextChars < 5) maxNextChars = 5;
+        drawMarqueeLine(2, 46, "  ", realClockInfo, maxNextChars + 2);
+        printRight(countdown, 46);
+
+        // Progress bar for current Pomodoro phase (Focus 25m / Break 5m)
+        String barLabel = String(progress) + "%";
+        int labelW = barLabel.length() * 6 + 2;
+        drawBar(2, 56, SCREEN_WIDTH - 4 - labelW, 7, progress);
+        display.setCursor(SCREEN_WIDTH - labelW + 2, 56);
+        display.print(barLabel);
+        return;
+    }
+
     // ── Normal Dashboard Mode ──────────────────────────────────
     // Yellow header band (Y0-15)
     // Extract date, day, year from p2_hdr (e.g. "8 Agustus | Jumat | 2026")

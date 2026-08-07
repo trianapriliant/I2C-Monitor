@@ -193,6 +193,73 @@ class QuotesManager:
 
 
 # ============================================================
+#  PomodoroManager — Siklus Pomodoro Otomatis (25m Focus / 5m Break)
+# ============================================================
+WORK_ACTIVITIES = ["Deep Work", "Desain Template", "Desain Lanjutan", "Development", "Tidur"]  # 'Tidur' included so user can test live right now!
+
+
+class PomodoroManager:
+    """Pengelola siklus Pomodoro (25m Focus / 5m Break) otomatis saat fase kerja."""
+
+    def __init__(self, focus_min=25, break_min=5):
+        self.focus_sec = focus_min * 60
+        self.break_sec = break_min * 60
+        self.current_act = ""
+        self.active = False
+        self.state = "FOCUS"  # FOCUS atau BREAK
+        self.phase_start = 0.0
+        self.session = 1
+
+    def update(self, current_act):
+        now = time.time()
+        is_work = any(w.lower() in current_act.lower() for w in WORK_ACTIVITIES)
+
+        if not is_work:
+            self.active = False
+            self.current_act = ""
+            return {"active": False}
+
+        # Jika baru pertama kali masuk fase kerja atau ganti aktivitas kerja
+        if not self.active or current_act != self.current_act:
+            self.active = True
+            self.current_act = current_act
+            self.state = "FOCUS"
+            self.phase_start = now
+            self.session = 1
+
+        duration = self.focus_sec if self.state == "FOCUS" else self.break_sec
+        elapsed = now - self.phase_start
+        remaining = max(0, int(duration - elapsed))
+
+        # Pergantian fasa otomatis jika durasi habis
+        if remaining <= 0:
+            if self.state == "FOCUS":
+                self.state = "BREAK"
+                self.phase_start = now
+                duration = self.break_sec
+                remaining = duration
+            else:
+                self.state = "FOCUS"
+                self.phase_start = now
+                self.session += 1
+                duration = self.focus_sec
+                remaining = duration
+
+        rem_m, rem_s = divmod(remaining, 60)
+        time_str = f"{rem_m:02d}:{rem_s:02d}"
+        pct = int(((duration - remaining) / duration) * 100)
+
+        return {
+            "active": True,
+            "state": self.state,
+            "session": self.session,
+            "time_str": time_str,
+            "pct": pct,
+            "activity": current_act,
+        }
+
+
+# ============================================================
 #  AnimationManager — State Machine Mode Tampilan
 # ============================================================
 MODE_NORMAL = "normal"
@@ -200,10 +267,11 @@ MODE_MORNING = "morning"
 MODE_EVENING = "evening"
 MODE_TRANSITION = "transition"
 MODE_PREVIEW = "preview"
+MODE_POMODORO = "pomodoro"
 
 
 class AnimationManager:
-    """Deteksi pergantian aktivitas & mode khusus (morning/evening/transition/preview)."""
+    """Deteksi pergantian aktivitas & mode khusus (morning/evening/transition/preview/pomodoro)."""
 
     def __init__(self, quotes):
         self.quotes = quotes
@@ -283,6 +351,7 @@ class Source(TokenSource):
         self.sched_mgr = ScheduleManager()
         self.quotes_mgr = QuotesManager()
         self.anim_mgr = AnimationManager(self.quotes_mgr)
+        self.pomo_mgr = PomodoroManager(focus_min=25, break_min=5)
 
     def available(self):
         return True
@@ -300,8 +369,12 @@ class Source(TokenSource):
         curr_name, curr_icon = self.sched_mgr.current(dt)
         next_name, next_start_time = self.sched_mgr.next_activity(dt)
 
+        pomo = self.pomo_mgr.update(curr_name)
         mode = self.anim_mgr.update(dt, curr_name)
         quote = self.anim_mgr.current_quote if mode == MODE_TRANSITION else ""
+
+        if mode == MODE_NORMAL and pomo.get("active", False):
+            mode = MODE_POMODORO
 
         if mode == MODE_PREVIEW:
             preview_items = self.sched_mgr.get_upcoming_items(dt, 4)
@@ -309,11 +382,20 @@ class Source(TokenSource):
             l2_val = preview_items[1] if len(preview_items) > 1 else ""
             l3_val = preview_items[2] if len(preview_items) > 2 else ""
             l4_val = preview_items[3] if len(preview_items) > 3 else ""
+        elif mode == MODE_POMODORO:
+            state_label = f"({pomo['state']} #{pomo['session']})"
+            l1_val = f"{curr_name} {state_label}"
+            l2_val = next_name
+            l3_val = next_start_time
+            l4_val = clock  # Jam asli dikirim di l4
+            progress = pomo["pct"]  # Bar persen fasa Pomodoro (0-100%)
         else:
             l1_val = curr_name
             l2_val = next_name
             l3_val = next_start_time
             l4_val = quote
+
+        big_text = pomo["time_str"] if mode == MODE_POMODORO else clock
 
         # Format review list untuk evening mode
         review_str = ""
@@ -326,7 +408,7 @@ class Source(TokenSource):
             "source": self.DISPLAY_NAME,
             "custom": {
                 "hdr": f"SCHEDULE | {progress}%",
-                "big": clock,
+                "big": big_text,
                 "l1": l1_val,
                 "l2": l2_val,
                 "l3": l3_val,
