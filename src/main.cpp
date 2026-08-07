@@ -1437,6 +1437,7 @@ void drawProductivityDashboard() {
         display.drawFastHLine(0, YELLOW_ROWS, SCREEN_WIDTH, SSD1306_WHITE);
 
         // Display 4 upcoming schedule items (fixed prefix/time on left, marquee activity text)
+        bool blinkOn = ((ms / 500) % 2 == 0);
         String lines[4] = {customScreen.line1, customScreen.line2, customScreen.line3, customScreen.line4};
         int ys[4] = {17, 28, 39, 50};
         for (int i = 0; i < 4; i++) {
@@ -1445,6 +1446,9 @@ void drawProductivityDashboard() {
             if (p >= 0) {
                 String prefix = item.substring(0, p);
                 String actName = item.substring(p + 1);
+                if (prefix.startsWith(">") && !blinkOn) {
+                    prefix = " " + prefix.substring(1);
+                }
                 drawMarqueeLine(2, ys[i], prefix, actName, 21);
             } else {
                 drawMarqueeLine(2, ys[i], "", item, 21);
@@ -1482,16 +1486,18 @@ void drawProductivityDashboard() {
     // Thin separator
     display.drawFastHLine(16, 35, SCREEN_WIDTH - 32, SSD1306_WHITE);
 
-    // Current Activity (Y37-45) — marquee if too long
-    drawMarqueeLine(2, 37, "> ", currAct, 20);
+    // Current Activity (Y37-45) — marquee if too long, slow blinking '>'
+    bool blinkOn = ((ms / 500) % 2 == 0);
+    String prefixCurr = blinkOn ? "> " : "  ";
+    drawMarqueeLine(2, 37, prefixCurr, currAct, 20);
 
-    // Next Activity + Countdown (Y46-54)
-    // Reserve space for countdown on the right, marquee the activity name
+    // Next Activity + Start Time (Y46-54)
+    // Reserve space for start time on the right, marquee the activity name
     int cdChars = countdown.length();
-    int maxNextChars = 21 - 2 - cdChars - 1; // 21 total - "> " prefix - countdown - 1 space gap
+    int maxNextChars = 21 - 2 - cdChars - 1; // 21 total - "  " prefix - start time - 1 space gap
     if (maxNextChars < 5) maxNextChars = 5;
-    drawMarqueeLine(2, 46, "> ", nextAct, maxNextChars + 2); // +2 for "> " prefix accounted inside
-    // Countdown right-aligned
+    drawMarqueeLine(2, 46, "  ", nextAct, maxNextChars + 2); // "  " prefix accounted inside
+    // Start Time right-aligned
     printRight(countdown, 46);
 
     // Progress Bar + Percentage Label (Y55-63)
