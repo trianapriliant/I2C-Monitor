@@ -304,7 +304,7 @@ class Source(TokenSource):
                 "l5": mode,
                 "bar1": progress,
                 # Page 2: Detail jadwal berikutnya
-                "p2_hdr": f"{day} | {date}",
+                "p2_hdr": f"{date} | {day}",
                 "p2_l1": f"NOW: {curr_icon} {curr_name}",
                 "p2_l2": f"NEXT: {next_name}",
                 "p2_l3": f"Countdown: {cd_str}",

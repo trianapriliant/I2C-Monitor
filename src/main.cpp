@@ -1423,8 +1423,6 @@ void drawProductivityDashboard() {
 
     // ── Normal Dashboard Mode ──────────────────────────────────
     // Yellow header band (Y0-15)
-    String hdrLeft = customScreen.hdrTitle;
-    hdrLeft.trim();
     // Extract day+date from p2_hdr (e.g. "Kamis | 7 Agustus")
     String dayDate = customScreen.p2HdrTitle;
     if (dayDate.length() == 0) dayDate = "Dashboard";
@@ -1433,11 +1431,14 @@ void drawProductivityDashboard() {
     display.setTextSize(1);
     display.setCursor(0, 0);
     display.print("SCHEDULE");
-    // Progress % on the right of header
-    String pctStr = String(progress) + "%";
-    printRight(pctStr, 0);
-    // Date on second line of yellow band
-    drawMarqueeLine(0, 8, "", dayDate, 21);
+    // Date on the right of header line 1
+    printRight(dayDate, 0);
+    // Day name on second line of yellow band (e.g. "Kamis, 8 Agustus")
+    String dayName = customScreen.p2HdrSub;
+    dayName.trim();
+    if (dayName.length() > 0) {
+        drawMarqueeLine(0, 8, "", dayName, 21);
+    }
     display.drawFastHLine(0, YELLOW_ROWS, SCREEN_WIDTH, SSD1306_WHITE);
 
     // Big Clock (Y18-33, textSize 2 = 16px tall)
@@ -1446,20 +1447,24 @@ void drawProductivityDashboard() {
     // Thin separator
     display.drawFastHLine(16, 35, SCREEN_WIDTH - 32, SSD1306_WHITE);
 
-    // Current Activity (Y37-45)
-    display.setCursor(2, 37);
-    display.print("> ");
-    display.print(currAct);
+    // Current Activity (Y37-45) — marquee if too long
+    drawMarqueeLine(2, 37, "> ", currAct, 20);
 
     // Next Activity + Countdown (Y46-54)
-    display.setCursor(2, 46);
-    display.print("> ");
-    display.print(nextAct);
+    // Reserve space for countdown on the right, marquee the activity name
+    int cdChars = countdown.length();
+    int maxNextChars = 21 - 2 - cdChars - 1; // 21 total - "> " prefix - countdown - 1 space gap
+    if (maxNextChars < 5) maxNextChars = 5;
+    drawMarqueeLine(2, 46, "> ", nextAct, maxNextChars + 2); // +2 for "> " prefix accounted inside
     // Countdown right-aligned
     printRight(countdown, 46);
 
-    // Progress Bar (Y56-62)
-    drawBar(2, 56, SCREEN_WIDTH - 4, 7, progress);
+    // Progress Bar + Percentage Label (Y55-63)
+    String barLabel = String(progress) + "%";
+    int labelW = barLabel.length() * 6 + 2; // px width of label + gap
+    drawBar(2, 56, SCREEN_WIDTH - 4 - labelW, 7, progress);
+    display.setCursor(SCREEN_WIDTH - labelW + 2, 56);
+    display.print(barLabel);
 }
 
 void pageCustomScreen() {
