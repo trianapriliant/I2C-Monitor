@@ -130,6 +130,23 @@ class ScheduleManager:
         h, m, name, _ = self.schedule[next_idx]
         return (name, f"{h:02d}:{m:02d}")
 
+    def get_upcoming_items(self, dt, count=4):
+        """Return list string (jam, nama) 4 aktivitas mendatang dari aktivitas saat ini."""
+        now_min = TimeManager.minutes_since_midnight(dt)
+        idx = self._find_index(now_min)
+        if idx < 0:
+            idx = 0
+
+        items = []
+        n = len(self.schedule)
+        for i in range(count):
+            item_idx = (idx + i) % n
+            h, m, name, _ = self.schedule[item_idx]
+            time_str = f"{h:02d}:{m:02d}"
+            prefix = ">" if i == 0 else " "
+            items.append(f"{prefix} {time_str} {name}")
+        return items
+
     def day_progress(self, dt):
         """Hitung persentase hari (06:30=0% → 22:30=100%)."""
         now_min = TimeManager.minutes_since_midnight(dt)
@@ -182,10 +199,11 @@ MODE_NORMAL = "normal"
 MODE_MORNING = "morning"
 MODE_EVENING = "evening"
 MODE_TRANSITION = "transition"
+MODE_PREVIEW = "preview"
 
 
 class AnimationManager:
-    """Deteksi pergantian aktivitas & mode khusus (morning/evening/transition)."""
+    """Deteksi pergantian aktivitas & mode khusus (morning/evening/transition/preview)."""
 
     def __init__(self, quotes):
         self.quotes = quotes
@@ -196,6 +214,7 @@ class AnimationManager:
         self.current_quote = ""
         self._morning_shown_date = ""
         self._evening_shown_date = ""
+        self.last_preview_time = time.time()  # Timer preview otomatis
 
     def update(self, dt, current_act):
         """Dipanggil setiap snapshot. Return mode string saat ini."""
@@ -238,6 +257,15 @@ class AnimationManager:
             self.last_activity = current_act
             return self.mode
 
+        # Deteksi preview jadwal otomatis (setiap 60 detik / 1 menit untuk tes)
+        # Nanti bisa diubah ke 300 detik (5 menit)
+        if (now - self.last_preview_time) >= 60.0:
+            self.last_preview_time = now
+            self.mode = MODE_PREVIEW
+            self.mode_start = now
+            self.mode_duration = 6.0  # Tampilkan preview selama 6 detik
+            return self.mode
+
         self.last_activity = current_act
         return MODE_NORMAL
 
@@ -273,7 +301,19 @@ class Source(TokenSource):
         next_name, next_start_time = self.sched_mgr.next_activity(dt)
 
         mode = self.anim_mgr.update(dt, curr_name)
-        quote = self.anim_mgr.current_quote if mode != MODE_NORMAL else ""
+        quote = self.anim_mgr.current_quote if mode == MODE_TRANSITION else ""
+
+        if mode == MODE_PREVIEW:
+            preview_items = self.sched_mgr.get_upcoming_items(dt, 4)
+            l1_val = preview_items[0] if len(preview_items) > 0 else ""
+            l2_val = preview_items[1] if len(preview_items) > 1 else ""
+            l3_val = preview_items[2] if len(preview_items) > 2 else ""
+            l4_val = preview_items[3] if len(preview_items) > 3 else ""
+        else:
+            l1_val = curr_name
+            l2_val = next_name
+            l3_val = next_start_time
+            l4_val = quote
 
         # Format review list untuk evening mode
         review_str = ""
@@ -285,10 +325,10 @@ class Source(TokenSource):
             "custom": {
                 "hdr": f"SCHEDULE | {progress}%",
                 "big": clock,
-                "l1": curr_name,
-                "l2": next_name,
-                "l3": next_start_time,
-                "l4": quote,
+                "l1": l1_val,
+                "l2": l2_val,
+                "l3": l3_val,
+                "l4": l4_val,
                 "l5": mode,
                 "bar1": progress,
                 # Page 2: Detail jadwal berikutnya

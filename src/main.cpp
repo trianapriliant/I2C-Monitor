@@ -1426,6 +1426,27 @@ void drawProductivityDashboard() {
         return;
     }
 
+    // ── Schedule Preview Mode (Every 1/5 min) ───────────────────
+    if (mode == "preview") {
+        display.setTextSize(1);
+        printCentered("PREVIEW JADWAL", 0, 1);
+        String dayDate = customScreen.p2HdrTitle;
+        if (dayDate.length() > 0) {
+            drawMarqueeLine(0, 8, "", dayDate, 21);
+        }
+        display.drawFastHLine(0, YELLOW_ROWS, SCREEN_WIDTH, SSD1306_WHITE);
+
+        // Display 4 upcoming schedule items
+        drawMarqueeLine(2, 17, "", customScreen.line1, 21);
+        drawMarqueeLine(2, 28, "", customScreen.line2, 21);
+        drawMarqueeLine(2, 39, "", customScreen.line3, 21);
+        drawMarqueeLine(2, 50, "", customScreen.line4, 21);
+
+        // Progress bar at bottom
+        drawBar(2, 58, SCREEN_WIDTH - 4, 5, progress);
+        return;
+    }
+
     // ── Normal Dashboard Mode ──────────────────────────────────
     // Yellow header band (Y0-15)
     // Extract day+date from p2_hdr (e.g. "Kamis | 7 Agustus")
