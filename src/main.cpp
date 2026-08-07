@@ -346,8 +346,13 @@ void drawMarqueeLine(int16_t x, int16_t y, const String &prefix, const String &t
     if (text.length() <= (size_t)availableChars) {
         display.print(text);
     } else {
-        String padded = text + F("   *   ") + text;
-        int scrollOffset = (millis() / 250) % (text.length() + 7);
+        // Separator tanpa asterisk, hanya spasi
+        String padded = text + F("       ") + text;
+        int totalScroll = text.length() + 7;
+        // Dwell 2 detik di posisi awal (8 frame * 250ms) sebelum mulai scroll
+        int dwellFrames = 8;
+        int rawFrame = (millis() / 250) % (totalScroll + dwellFrames);
+        int scrollOffset = (rawFrame < dwellFrames) ? 0 : (rawFrame - dwellFrames);
         String visible = padded.substring(scrollOffset, scrollOffset + availableChars);
         display.print(visible);
     }
