@@ -119,20 +119,16 @@ class ScheduleManager:
         return (name, icon)
 
     def next_activity(self, dt):
-        """Return (nama, countdown_menit) aktivitas berikutnya."""
+        """Return (nama, jam_mulai_str) aktivitas berikutnya."""
         now_min = TimeManager.minutes_since_midnight(dt)
         idx = self._find_index(now_min)
 
         next_idx = idx + 1
         if next_idx >= len(self.schedule):
-            # Sudah melewati aktivitas terakhir → next = pertama besok
-            first_min = self.times_min[0]
-            countdown = (24 * 60 - now_min) + first_min
-            return (self.schedule[0][2], countdown)
+            next_idx = 0
 
-        next_min = self.times_min[next_idx]
-        countdown = next_min - now_min
-        return (self.schedule[next_idx][2], max(0, countdown))
+        h, m, name, _ = self.schedule[next_idx]
+        return (name, f"{h:02d}:{m:02d}")
 
     def day_progress(self, dt):
         """Hitung persentase hari (06:30=0% → 22:30=100%)."""
@@ -274,18 +270,10 @@ class Source(TokenSource):
         progress = self.sched_mgr.day_progress(dt)
 
         curr_name, curr_icon = self.sched_mgr.current(dt)
-        next_name, next_countdown = self.sched_mgr.next_activity(dt)
+        next_name, next_start_time = self.sched_mgr.next_activity(dt)
 
         mode = self.anim_mgr.update(dt, curr_name)
         quote = self.anim_mgr.current_quote if mode != MODE_NORMAL else ""
-
-        # Format countdown
-        if next_countdown >= 60:
-            cd_h = next_countdown // 60
-            cd_m = next_countdown % 60
-            cd_str = f"{cd_h}j{cd_m:02d}m" if cd_m > 0 else f"{cd_h}j"
-        else:
-            cd_str = f"{next_countdown}m"
 
         # Format review list untuk evening mode
         review_str = ""
@@ -299,15 +287,15 @@ class Source(TokenSource):
                 "big": clock,
                 "l1": curr_name,
                 "l2": next_name,
-                "l3": cd_str,
+                "l3": next_start_time,
                 "l4": quote,
                 "l5": mode,
                 "bar1": progress,
                 # Page 2: Detail jadwal berikutnya
                 "p2_hdr": f"{date} | {day}",
                 "p2_l1": f"NOW: {curr_icon} {curr_name}",
-                "p2_l2": f"NEXT: {next_name}",
-                "p2_l3": f"Countdown: {cd_str}",
+                "p2_l2": f"NEXT: {next_name} ({next_start_time})",
+                "p2_l3": f"Mulai: {next_start_time}",
                 "p2_l4": f"Progress: {progress}%",
                 "p2_l5": review_str if review_str else self.quotes_mgr.random_quote(),
             },
