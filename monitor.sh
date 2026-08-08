@@ -18,24 +18,24 @@ usage() {
 I2C OLED Multi-Mode & Token Monitor
 
 PENGGUNAAN & SWITCHER:
-  ./monitor.sh switch <mode>   ganti mode tampilan OLED di background
-  ./monitor.sh menu            buka menu interaktif terminal untuk pilih mode
-  ./monitor.sh list            tampilkan daftar semua mode tampilan
-  ./monitor.sh rotate [detik]  rotasi otomatis antar mode (default: 10 detik)
+  ./monitor switch <mode>   ganti mode tampilan OLED di background
+  ./monitor menu            buka menu interaktif terminal untuk pilih mode
+  ./monitor list            tampilkan daftar semua mode tampilan
+  ./monitor rotate [detik]  rotasi otomatis antar mode (default: 10 detik)
 
 KONTROL UTAMA:
-  ./monitor.sh start [source]  jalankan monitor di background (default: claude-code)
-  ./monitor.sh run   [source]  jalankan di depan layar, Ctrl+C untuk berhenti
-  ./monitor.sh stop            hentikan monitor
-  ./monitor.sh status          cek monitor jalan atau tidak
-  ./monitor.sh log             ikuti log secara langsung
+  ./monitor start [source]  jalankan monitor di background (default: claude-code)
+  ./monitor run   [source]  jalankan di depan layar, Ctrl+C untuk berhenti
+  ./monitor stop            hentikan monitor
+  ./monitor status          cek monitor jalan atau tidak
+  ./monitor log             ikuti log secara langsung
 
 UTILITAS:
-  ./monitor.sh flash           build + upload firmware (layar penuh)
-  ./monitor.sh flash yellow    upload versi area kuning saja
-  ./monitor.sh serial          lihat output mentah dari board
-  ./monitor.sh calibrate 60,6  hitung budget dari angka panel /usage
-  ./monitor.sh page 4          pindah ke halaman tertentu
+  ./monitor flash           build + upload firmware (layar penuh)
+  ./monitor flash yellow    upload versi area kuning saja
+  ./monitor serial          lihat output mentah dari board
+  ./monitor calibrate 60,6  hitung budget dari angka panel /usage
+  ./monitor page 4          pindah ke halaman tertentu
 
 MODE YANG TERSEDIA:
   - claude-code   (Token Monitor Claude Code)
@@ -188,7 +188,7 @@ case "$cmd" in
     switch)
         if [ $# -lt 1 ]; then
             echo "PILIHAN MODE: claude-code, antigravity, sysmon, crypto, weather, spotify, pomodoro" >&2
-            echo "Contoh: ./monitor.sh switch sysmon" >&2
+            echo "Contoh: ./monitor switch sysmon" >&2
             exit 1
         fi
         start_source "$1"
@@ -241,7 +241,7 @@ case "$cmd" in
         port=$(find_port)
         echo "Upload $env ke $port ..."
         $PIO run -e "$env" -t upload --upload-port "$port"
-        echo "Selesai. Jalankan './monitor.sh start' untuk mulai lagi."
+        echo "Selesai. Jalankan './monitor start' untuk mulai lagi."
         ;;
 
     serial)
@@ -253,7 +253,7 @@ case "$cmd" in
 
     calibrate)
         if [ $# -lt 1 ]; then
-            echo "Contoh: ./monitor.sh calibrate 60,6" >&2
+            echo "Contoh: ./monitor calibrate 60,6" >&2
             exit 1
         fi
         python3 tools/token_monitor.py --calibrate "$1" --dry-run
@@ -261,7 +261,7 @@ case "$cmd" in
 
     page)
         require_deps
-        [ $# -ge 1 ] || { echo "Contoh: ./monitor.sh page 4" >&2; exit 1; }
+        [ $# -ge 1 ] || { echo "Contoh: ./monitor page 4" >&2; exit 1; }
         was_running=false
         is_running && was_running=true
         stop_monitor >/dev/null

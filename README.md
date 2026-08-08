@@ -68,10 +68,10 @@ Alamat I2C default: `0x3C` (dapat diubah di `include/config.h`).
 
 ```bash
 # Upload firmware utama (Layar penuh 128x64)
-./monitor.sh flash
+./monitor flash
 
 # Upload versi area kuning saja
-./monitor.sh flash yellow
+./monitor flash yellow
 ```
 
 ---
@@ -100,38 +100,38 @@ Alamat I2C default: `0x3C` (dapat diubah di `include/config.h`).
 
 ---
 
-## Perintah Penggunaan (`monitor.sh`)
+## Perintah Penggunaan (`monitor`)
 
 ```bash
 # Menu interaktif terminal (pilih 0-99)
-./monitor.sh menu
+./monitor menu
 
 # Berpindah mode instan di background
-./monitor.sh switch visualizer
-./monitor.sh switch thermals
-./monitor.sh switch calendar
-./monitor.sh switch docker
-./monitor.sh switch worldclock
-./monitor.sh switch github
-./monitor.sh switch spotify
-./monitor.sh switch crypto
-./monitor.sh switch pomodoro
-./monitor.sh switch network
-./monitor.sh switch stocks
-./monitor.sh switch todo
-./monitor.sh switch companion
-./monitor.sh switch sysmon
-./monitor.sh switch weather
-./monitor.sh switch claude-code
+./monitor switch visualizer
+./monitor switch thermals
+./monitor switch calendar
+./monitor switch docker
+./monitor switch worldclock
+./monitor switch github
+./monitor switch spotify
+./monitor switch crypto
+./monitor switch pomodoro
+./monitor switch network
+./monitor switch stocks
+./monitor switch todo
+./monitor switch companion
+./monitor switch sysmon
+./monitor switch weather
+./monitor switch claude-code
 
 # Rotasi otomatis semua mode (ganti tiap 10 detik)
-./monitor.sh rotate 10
+./monitor rotate 10
 
 # Perintah kontrol
-./monitor.sh start <mode>   # Jalankan mode di background
-./monitor.sh status         # Cek status monitor
-./monitor.sh log            # Lihat log realtime
-./monitor.sh stop           # Hentikan monitor
+./monitor start <mode>   # Jalankan mode di background
+./monitor status         # Cek status monitor
+./monitor log            # Lihat log realtime
+./monitor stop           # Hentikan monitor
 ```
 
 ---

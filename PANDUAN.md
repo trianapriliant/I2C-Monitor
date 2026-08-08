@@ -8,13 +8,13 @@ Panduan praktis pengoperasian harian 17 mode tampilan, tombol interaktif, dan ka
 
 ```bash
 pip3 install pyserial
-chmod +x monitor.sh
+chmod +x monitor.sh monitor
 ```
 
 Colok ESP32 ke port USB Mac, lalu upload firmware:
 
 ```bash
-./monitor.sh flash
+./monitor flash
 ```
 
 ---
@@ -22,11 +22,11 @@ Colok ESP32 ke port USB Mac, lalu upload firmware:
 ## ⚡ Perintah Pengoperasian Harian
 
 ```bash
-./monitor.sh menu       # buka menu interaktif terminal (0-99)
-./monitor.sh start      # jalankan di background (default: claude-code)
-./monitor.sh status     # cek status monitor jalan atau tidak
-./monitor.sh stop       # hentikan monitor
-./monitor.sh log        # lihat log langsung di terminal (Ctrl+C untuk keluar)
+./monitor menu       # buka menu interaktif terminal (0-99)
+./monitor start      # jalankan di background (default: claude-code)
+./monitor status     # cek status monitor jalan atau tidak
+./monitor stop       # hentikan monitor
+./monitor log        # lihat log langsung di terminal (Ctrl+C untuk keluar)
 ```
 
 ---
@@ -37,25 +37,25 @@ Kamu bisa berpindah mode secara instan lewat perintah `switch`, menu interaktif,
 
 ```bash
 # Berpindah mode langsung:
-./monitor.sh switch visualizer  # Audio Equalizer Spectrum Visualizer
-./monitor.sh switch thermals    # Mac CPU Temp & Battery Health
-./monitor.sh switch calendar    # Agenda Calendar & Meeting Alert
-./monitor.sh switch docker      # Docker Containers & Local Servers
-./monitor.sh switch worldclock  # World Clock Multi-Timezone
-./monitor.sh switch github      # GitHub & CI/CD Status
-./monitor.sh switch spotify     # Media Player & Synced Lyrics
-./monitor.sh switch crypto      # Crypto Ticker 3-Halaman
-./monitor.sh switch pomodoro    # Focus Timer Interaktif
-./monitor.sh switch network     # Network Ping & Traffic Speed
-./monitor.sh switch stocks      # Stock Market & Kurs USD/IDR
-./monitor.sh switch todo        # Interactive Daily Todo List
-./monitor.sh switch companion   # Maskot Piksel Reaktif
-./monitor.sh switch sysmon      # PC System Monitor
-./monitor.sh switch weather     # Jam Digital & Cuaca Lokal
-./monitor.sh switch claude-code # Token Monitor Claude AI
+./monitor switch visualizer  # Audio Equalizer Spectrum Visualizer
+./monitor switch thermals    # Mac CPU Temp & Battery Health
+./monitor switch calendar    # Agenda Calendar & Meeting Alert
+./monitor switch docker      # Docker Containers & Local Servers
+./monitor switch worldclock  # World Clock Multi-Timezone
+./monitor switch github      # GitHub & CI/CD Status
+./monitor switch spotify     # Media Player & Synced Lyrics
+./monitor switch crypto      # Crypto Ticker 3-Halaman
+./monitor switch pomodoro    # Focus Timer Interaktif
+./monitor switch network     # Network Ping & Traffic Speed
+./monitor switch stocks      # Stock Market & Kurs USD/IDR
+./monitor switch todo        # Interactive Daily Todo List
+./monitor switch companion   # Maskot Piksel Reaktif
+./monitor switch sysmon      # PC System Monitor
+./monitor switch weather     # Jam Digital & Cuaca Lokal
+./monitor switch claude-code # Token Monitor Claude AI
 
 # Rotasi otomatis antar semua mode tiap N detik:
-./monitor.sh rotate 10
+./monitor rotate 10
 ```
 
 ---
@@ -68,12 +68,12 @@ Tombol bawaan **BOOT (GPIO0)** atau **Tombol Eksternal di GPIO4** memiliki fungs
 * **Klik 1x (Short Press)**: Pindah ke sub-halaman berikutnya (misal: Halaman 1 ➔ Halaman 2 ➔ Halaman 3).
 * **Tahan ~1 Detik (Long Hold)**: Mengaktifkan / mematikan **Auto-Cycle** (pergantian sub-halaman otomatis).
 
-### 2. **Mode Pomodoro (`./monitor.sh switch pomodoro`)**
+### 2. **Mode Pomodoro (`./monitor switch pomodoro`)**
 * **Klik 1x**: Start / Pause timer Pomodoro.
 * **Klik 2x**: Reset timer ke awal sesi.
 * **Tahan ~1 Detik (Hold)**: Berganti preset Pomodoro secara berurutan (`25/5/30` ➔ `50/10/60` ➔ `90/10/60`).
 
-### 3. **Mode Interactive Todo (`./monitor.sh switch todo`)**
+### 3. **Mode Interactive Todo (`./monitor switch todo`)**
 * **Klik 1x**: Centang / coret status tugas yang ditunjuk `[ ]` ➔ `[x]` (otomatis tersimpan ke `~/todo.txt`).
 * **Klik 2x**: Memindahkan kursor penanda `>` ke baris tugas berikutnya.
 
@@ -111,7 +111,7 @@ Bar batas 5 jam & mingguan pada mode `claude-code` dihitung berdasarkan estimasi
 2. Catat persentase 5 jam dan mingguan (misal `60%` dan `6%`).
 3. Jalankan:
    ```bash
-   ./monitor.sh calibrate 60,6
+   ./monitor calibrate 60,6
    ```
 
 ---
@@ -120,7 +120,7 @@ Bar batas 5 jam & mingguan pada mode `claude-code` dihitung berdasarkan estimasi
 
 | Gejala | Penyebab & Solusi |
 | :--- | :--- |
-| Layar berkedip / glitch saat ganti lirik | Sudah diatasi dengan **Double-Buffering Shadow Commit** di firmware terbaru (`./monitor.sh flash`). |
+| Layar berkedip / glitch saat ganti lirik | Sudah diatasi dengan **Double-Buffering Shadow Commit** di firmware terbaru (`./monitor flash`). |
 | "ESP32 tidak terdeteksi" | Kabel terlepas, atau kabel USB tipe *charge-only* (tanpa jalur data). Ganti kabel data USB. |
-| Upload gagal: "port is busy" | Monitor background masih berjalan dan memegang port serial. Jalankan `./monitor.sh stop` dulu. |
+| Upload gagal: "port is busy" | Monitor background masih berjalan dan memegang port serial. Jalankan `./monitor stop` dulu. |
 | Lirik lagu lambat terpotong `~~~ ~~ ~` | Sudah disesuaikan di `spotify.py` agar jeda instrumen hanya aktif jika jeda musik > 10 detik. |
